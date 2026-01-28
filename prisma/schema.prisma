@@ -13,3 +13,134 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+//Enums
+enum LoanStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  OVERDUE
+  COMPLETED
+  DEFAULTED
+  CANCELLED
+}
+
+enum DocumentType {
+  ID
+  BANK_STATEMENT
+  CONTRACT
+  OTHER
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+// CORE MODELS
+model Client {
+  id            String   @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String   @unique
+  phone         String?
+  idNumber      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  loans         Loan[]
+  documents     Document[]
+}
+
+model Loan {
+  id              String      @id @default(uuid())
+  reference       String      @unique
+  principal       Decimal     @db.Decimal(10, 2)
+  interestRate    Decimal     @db.Decimal(5, 2)
+  durationMonths  Int
+  startDate       DateTime?
+  endDate         DateTime?
+  status          LoanStatus  @default(DRAFT)
+
+  clientId        String
+  client          Client      @relation(fields: [clientId], references: [id])
+
+  contractId      String?
+  contract        Contract?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  transitions     LoanTransition[]
+  payments        Payment[]
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  loanId      String   @unique
+  fileUrl     String
+  signed      Boolean  @default(false)
+  signedAt    DateTime?
+
+  createdAt   DateTime @default(now())
+
+  loan        Loan     @relation(fields: [loanId], references: [id])
+}
+
+// SUPPORTING MODELS
+model Document {
+  id          String        @id @default(uuid())
+  clientId    String
+  type        DocumentType
+  fileUrl     String
+
+  uploadedAt  DateTime      @default(now())
+
+  client      Client        @relation(fields: [clientId], references: [id])
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  loanId      String
+  amount      Decimal  @db.Decimal(10, 2)
+  paidAt      DateTime @default(now())
+
+  loan        Loan     @relation(fields: [loanId], references: [id])
+}
+
+// AUDIT & STATE TRACKING
+model LoanTransition {
+  id          String      @id @default(uuid())
+  loanId      String
+  fromStatus  LoanStatus
+  toStatus    LoanStatus
+  reason      String?
+  performedBy String?
+
+  createdAt   DateTime    @default(now())
+
+  loan        Loan        @relation(fields: [loanId], references: [id])
+}
+
+// INTERNAL USERS
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String
+  role        UserRole  @default(STAFF)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sessions    Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([userId])
+}
