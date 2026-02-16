@@ -1,6 +1,7 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import { LoanStatus } from '~~/app/generated/prisma/client'
+import { createError, defineEventHandler, readBody } from 'h3'
 
 const allowedTransitions: Record<LoanStatus, LoanStatus[]> = {
   DRAFT: ['PENDING_APPROVAL', 'CANCELLED'],
@@ -13,9 +14,12 @@ const allowedTransitions: Record<LoanStatus, LoanStatus[]> = {
 }
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event)
+  await requireAuth(event)
 
-  const id = event.context.params!.id
+  const id = event.context.params?.id
+  if (!id) {
+    throw createError({ statusCode: 400, message: 'Missing loan id' })
+  }
   const { nextStatus } = await readBody(event)
 
   const loan = await prisma.loan.findUnique({ where: { id } })
@@ -30,8 +34,20 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const updateData: { status: LoanStatus; startDate?: Date; endDate?: Date } = {
+    status: nextStatus
+  }
+
+  if (nextStatus === 'ACTIVE') {
+    const startDate = new Date()
+    const endDate = new Date(startDate)
+    endDate.setMonth(endDate.getMonth() + loan.durationMonths)
+    updateData.startDate = startDate
+    updateData.endDate = endDate
+  }
+
   return prisma.loan.update({
     where: { id },
-    data: { status: nextStatus }
+    data: updateData
   })
 })

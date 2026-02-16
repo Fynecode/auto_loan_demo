@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, watch } from 'vue'
+import { ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
   Home,
   List,
@@ -56,20 +57,20 @@ function toggle() {
 
     <!-- Main Nav -->
     <nav class="flex flex-col gap-2">
-      <a class="nav-item">
+      <RouterLink to="/dashboard" class="nav-item">
         <Home size="18" class="shrink-0" />
         <span v-if="!internalCollapsed">Dashboard</span>
-      </a>
+      </RouterLink>
 
-      <a class="nav-item">
+      <RouterLink to="/loans" class="nav-item">
         <List size="18" class="shrink-0" />
         <span v-if="!internalCollapsed">Loans</span>
-      </a>
+      </RouterLink>
 
-      <a class="nav-item">
+      <RouterLink to="/clients" class="nav-item">
         <Users size="18" class="shrink-0" />
         <span v-if="!internalCollapsed">Clients</span>
-      </a>
+      </RouterLink>
     </nav>
 
     <!-- Bottom Nav -->

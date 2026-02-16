@@ -1,23 +1,25 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import sideNav from '~/components/sideNav.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
 const sidebarCollapsed = ref(false)
-const { data: loans, pending, error } = await useFetch('/api/loans')
+const pageSize = 15
+
+const { data: loans, pending, error } = await useFetch('/api/loans', {
+  query: {
+    sort: 'newest',
+    status: 'all',
+    page: 1,
+    pageSize
+  }
+})
 
 if (error.value) {
   console.error('Error fetching loans:', error.value)
 }
-
-// Example loans
-// const loans = ref([
-//   { id: '1', client: 'John Doe', amount: 5000, status: 'DRAFT', due: '2026-02-28' },
-//   { id: '2', client: 'Jane Smith', amount: 12000, status: 'ACTIVE', due: '2026-03-10' },
-//   { id: '3', client: 'Peter Pan', amount: 8000, status: 'OVERDUE', due: '2026-01-20' },
-// ])
 
 function statusColor(status: string) {
   switch (status) {
@@ -33,7 +35,7 @@ function statusColor(status: string) {
 }
 
 function createLoan() {
-  router.push('/loans/new')
+  router.push('/createloan')
 }
 </script>
 
@@ -42,7 +44,7 @@ function createLoan() {
 
   <!-- Main section -->
   <section
-    class="bg-gray-200 p-6 rounded-2xl shadow transition-all duration-300"
+    class="p-6 transition-all duration-300"
     :class="sidebarCollapsed ? 'ml-16' : 'ml-[20%]'"
   >
     <!-- Welcome message -->
@@ -60,7 +62,7 @@ function createLoan() {
     </div>
 
     <!-- Loan table header -->
-    <div class="grid grid-cols-5 text-xs text-gray-400 mb-2" v-if="loans && loans.length">
+    <div class="grid grid-cols-5 text-xs text-gray-400 mb-2" v-if="loans && loans.items.length">
       <span>Client</span>
       <span>Amount</span>
       <span>Status</span>
@@ -70,8 +72,8 @@ function createLoan() {
 
     <!-- Loan table rows -->
     <div
-      v-if="loans && loans.length"
-      v-for="loan in loans"
+      v-if="loans && loans.items.length"
+      v-for="loan in loans.items"
       :key="loan.id"
       class="grid grid-cols-5 items-center py-3 border-t border-white/5 text-sm"
     >
@@ -86,7 +88,12 @@ function createLoan() {
         {{ loan.status }}
       </span>
       <span>{{ loan.due }}</span>
-      <button class="text-xs text-cyan-400 hover:underline">View</button>
+      <button
+        class="text-xs text-cyan-400 hover:underline"
+        @click="router.push(`/loans/${loan.id}`)"
+      >
+        View
+      </button>
     </div>
   </section>
 </template>
