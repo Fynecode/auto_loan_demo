@@ -2,11 +2,14 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import sideNav from '~/components/sideNav.vue'
-import { Download, FileText, FileSignature, PencilLine, Trash2, X } from 'lucide-vue-next'
+import { Download, FileText, FileSignature, PencilLine, Trash2, X, Loader2 } from 'lucide-vue-next'
+import { createNewLoanWithPreFill } from '~/utils/createNewLoanWithPreFill'
+import { useToast } from '~/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
-const sidebarCollapsed = ref(false)
+const { addToast } = useToast()
+const sidebarCollapsed = ref(true)
 
 const loanId = computed(() => String(route.params.id || ''))
 
@@ -15,12 +18,28 @@ const { data: loan, pending, error, refresh } = await useFetch(() => `/api/loans
 const actionError = ref<string | null>(null)
 const actionSuccess = ref<string | null>(null)
 const selectedStatus = ref<string>('')
-const contractFile = ref<File | null>(null)
+const signedContractFile = ref<File | null>(null)
 const updatingStatus = ref(false)
 const updatingContract = ref(false)
 const deletingLoan = ref(false)
 const editingStatus = ref(false)
-const editingContract = ref(false)
+const updatingQuantity = ref(false)
+const emailingContract = ref(false)
+const repayableAdjustmentMode = ref<'monthly' | 'custom'>('monthly')
+const customReductionAmount = ref<number | null>(null)
+const updatingRepayable = ref(false)
+const applyingPenalty = ref(false)
+const penaltyMonths = ref<number | null>(3)
+const extensionMonths = ref<number | null>(1)
+const penaltyModalOpen = ref(false)
+const applyInstallmentPenalty = ref(false)
+const applyPeriodExtension = ref(false)
+const applyFullRepayment = ref(false)
+const penaltyReasonInstallment = ref('')
+const penaltyReasonExtension = ref('')
+const penaltyReasonFull = ref('')
+const viewTab = ref<'info' | 'history'>('info')
+const deleteModalOpen = ref(false)
 
 const allowedTransitions: Record<string, string[]> = {
   DRAFT: ['PENDING_APPROVAL', 'CANCELLED'],
@@ -38,22 +57,35 @@ const nextStatusOptions = computed(() => {
   return allowedTransitions[status] ?? []
 })
 
-function backToDashboard() {
-  router.push('/dashboard')
+function createNewLoanFromClient() {
+  if (!loan.value) return
+  createNewLoanWithPreFill(router, loan.value)
 }
 
-function createNewLoanFromClient() {
-  if (!loan.value?.client) return
-  router.push({
-    path: '/createloan',
-    query: {
-      fullName: loan.value.client.firstName ?? '',
-      email: loan.value.client.email ?? '',
-      idNumber: loan.value.client.idNumber ?? '',
-      empNumber: loan.value.client.empNumber ?? '',
-      phone: loan.value.client.phone ?? ''
-    }
-  })
+async function increaseQuantity() {
+  if (!loan.value) return
+  if (loan.value.status !== 'COMPLETED') {
+    actionError.value = 'Quantity can only be increased for completed loans'
+    addToast(actionError.value, 'error')
+    return
+  }
+  updatingQuantity.value = true
+  actionError.value = null
+  actionSuccess.value = null
+  try {
+    await $fetch(`/api/loans/${loan.value.id}/quantity`, {
+      method: 'PATCH',
+      body: { quantity: (loan.value.quantity ?? 0) + 1 }
+    })
+    await refresh()
+    actionSuccess.value = 'Quantity updated'
+    addToast('Loan updated', 'success')
+  } catch (e: any) {
+    actionError.value = e?.data?.message ?? 'Failed to update quantity'
+    addToast(actionError.value, 'error')
+  } finally {
+    updatingQuantity.value = false
+  }
 }
 
 async function updateStatus() {
@@ -75,8 +107,10 @@ async function updateStatus() {
     selectedStatus.value = ''
     editingStatus.value = false
     actionSuccess.value = 'Status updated'
+    addToast('Loan updated', 'success')
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to update status'
+    addToast(actionError.value, 'error')
     editingStatus.value = false
   } finally {
     updatingStatus.value = false
@@ -90,36 +124,31 @@ function toggleStatusEdit() {
   selectedStatus.value = ''
 }
 
-function toggleContractEdit() {
-  editingContract.value = !editingContract.value
-  contractFile.value = null
-}
-
-async function updateContract() {
+async function uploadSignedContract() {
   actionError.value = null
   actionSuccess.value = null
 
-  if (!contractFile.value) {
-    actionError.value = 'Select a contract file to upload'
+  if (!signedContractFile.value) {
+    actionError.value = 'Select a signed contract file to upload'
     return
   }
 
   updatingContract.value = true
   try {
     const form = new FormData()
-    form.append('contract', contractFile.value)
+    form.append('contract', signedContractFile.value)
 
     await $fetch(`/api/loans/${loanId.value}/contract`, {
       method: 'POST',
       body: form
     })
     await refresh()
-    contractFile.value = null
-    editingContract.value = false
-    actionSuccess.value = 'Contract updated'
+    signedContractFile.value = null
+    actionSuccess.value = 'Signed contract uploaded'
+    addToast('Loan updated', 'success')
   } catch (e: any) {
-    actionError.value = e?.data?.message ?? 'Failed to update contract'
-    editingContract.value = false
+    actionError.value = e?.data?.message ?? 'Failed to upload signed contract'
+    addToast(actionError.value, 'error')
   } finally {
     updatingContract.value = false
   }
@@ -129,19 +158,38 @@ async function deleteLoan() {
   actionError.value = null
   actionSuccess.value = null
 
-  if (!confirm('Delete this loan? This cannot be undone.')) return
-
   deletingLoan.value = true
   try {
     await $fetch(`/api/loans/${loanId.value}`, { method: 'DELETE' })
+    addToast('Loan deleted', 'success')
     router.push('/dashboard')
+    deleteModalOpen.value = false
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to delete loan'
+    addToast(actionError.value, 'error')
   } finally {
     deletingLoan.value = false
   }
 }
 
+async function emailContract() {
+  if (!loan.value?.contract) return
+  actionError.value = null
+  actionSuccess.value = null
+  emailingContract.value = true
+  try {
+    await $fetch(`/api/contracts/${loan.value.contract.id}/email`, { method: 'POST' })
+    actionSuccess.value = loan.value.contract.signed
+      ? 'Signed contract emailed'
+      : 'Unsigned contract emailed'
+    addToast('Loan updated', 'success')
+  } catch (e: any) {
+    actionError.value = e?.data?.message ?? 'Failed to email contract'
+    addToast(actionError.value, 'error')
+  } finally {
+    emailingContract.value = false
+  }
+}
 function formatDate(value: string | null) {
   if (!value) return '--'
   const date = new Date(value)
@@ -155,6 +203,110 @@ function getDownloadName(url: string, fallbackBase: string) {
   const safeExt = ext && ext.length <= 5 ? `.${ext}` : '.pdf'
   return `${fallbackBase}${safeExt}`
 }
+
+const totalRepayable = computed(() => Number(loan.value?.totalAmountRepayable ?? 0))
+const remainingAmount = computed(() => Number(loan.value?.remainingAmount ?? totalRepayable.value))
+const totalMonthlyInstallment = computed(() => Number(loan.value?.totalMonthlyInstallment ?? 0))
+const reductionAmount = computed(() => {
+  if (repayableAdjustmentMode.value === 'monthly') return totalMonthlyInstallment.value
+  return Math.max(Number(customReductionAmount.value ?? 0), 0)
+})
+const adjustedRepayable = computed(() => {
+  const remaining = remainingAmount.value - reductionAmount.value
+  return Math.max(remaining, 0)
+})
+
+function formatCurrency(value: number) {
+  return `N$ ${value.toLocaleString()}`
+}
+
+async function saveRemainingAmount() {
+  if (!loan.value) return
+  actionError.value = null
+  actionSuccess.value = null
+  updatingRepayable.value = true
+  try {
+    await $fetch(`/api/loans/${loan.value.id}/repayable`, {
+      method: 'PATCH',
+      body: { remainingAmount: adjustedRepayable.value }
+    })
+    await refresh()
+    actionSuccess.value = 'Remaining amount updated'
+    addToast('Loan updated', 'success')
+  } catch (e: any) {
+    actionError.value = e?.data?.message ?? 'Failed to update remaining amount'
+    addToast(actionError.value, 'error')
+  } finally {
+    updatingRepayable.value = false
+  }
+}
+
+async function applySelectedPenalties() {
+  if (!loan.value) return
+  actionError.value = null
+  actionSuccess.value = null
+  applyingPenalty.value = true
+  try {
+    const requests: Array<Promise<any>> = []
+
+    if (applyInstallmentPenalty.value) {
+      requests.push($fetch(`/api/loans/${loan.value.id}/penalties`, {
+        method: 'POST',
+        body: {
+          months: penaltyMonths.value,
+          type: 'INSTALLMENT_RATE',
+          reason: penaltyReasonInstallment.value
+        }
+      }))
+    }
+
+    if (applyPeriodExtension.value) {
+      requests.push($fetch(`/api/loans/${loan.value.id}/penalties`, {
+        method: 'POST',
+        body: {
+          months: extensionMonths.value,
+          type: 'PERIOD_EXTENSION',
+          reason: penaltyReasonExtension.value
+        }
+      }))
+    }
+
+    if (applyFullRepayment.value) {
+      requests.push($fetch(`/api/loans/${loan.value.id}/penalties`, {
+        method: 'POST',
+        body: { type: 'FULL_REPAYMENT', reason: penaltyReasonFull.value }
+      }))
+    }
+
+    if (!requests.length) {
+      actionError.value = 'Select at least one penalty'
+      return
+    }
+
+    await Promise.all(requests)
+    await refresh()
+    actionSuccess.value = 'Penalty applied'
+    addToast('Loan updated', 'success')
+    penaltyModalOpen.value = false
+  } catch (e: any) {
+    actionError.value = e?.data?.message ?? 'Failed to apply penalty'
+    addToast(actionError.value, 'error')
+  } finally {
+    applyingPenalty.value = false
+  }
+}
+
+function clearAndClosePenalties() {
+  applyInstallmentPenalty.value = false
+  applyPeriodExtension.value = false
+  applyFullRepayment.value = false
+  penaltyMonths.value = 3
+  extensionMonths.value = 1
+  penaltyReasonInstallment.value = ''
+  penaltyReasonExtension.value = ''
+  penaltyReasonFull.value = ''
+  penaltyModalOpen.value = false
+}
 </script>
 
 <template>
@@ -162,27 +314,51 @@ function getDownloadName(url: string, fallbackBase: string) {
     v-model:collapsed="sidebarCollapsed"
   />
 
-  <section class="p-6 transition-all duration-300" :class="sidebarCollapsed ? 'ml-16' : 'ml-[20%]'">
-    <div class="flex items-center justify-between mb-6">
+  <section class="pt-16 p-4 md:pt-6 md:p-6 transition-all duration-300" :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-[20%]'">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
       <h1 class="text-xl font-semibold">Loan Details</h1>
+      <div class="flex items-center gap-3">
+        <button
+          @click="increaseQuantity"
+          :disabled="updatingQuantity || loan?.status !== 'COMPLETED'"
+          class="px-3 py-1 rounded bg-cyan-500 text-white text-sm disabled:bg-cyan-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Loader2 v-if="updatingQuantity" class="w-4 h-4 animate-spin" />
+          {{ updatingQuantity ? 'Updating...' : '+ Quantity' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 mb-4">
       <button
-        @click="backToDashboard"
-        class="text-sm text-cyan-500 hover:underline"
+        class="px-3 py-1 rounded text-sm border"
+        :class="viewTab === 'info' ? 'border-cyan-500 text-cyan-500' : 'border-gray-300 text-gray-500'"
+        @click="viewTab = 'info'"
       >
-        Back to dashboard
+        Loan Info & Actions
+      </button>
+      <button
+        class="px-3 py-1 rounded text-sm border"
+        :class="viewTab === 'history' ? 'border-cyan-500 text-cyan-500' : 'border-gray-300 text-gray-500'"
+        @click="viewTab = 'history'"
+      >
+        Loan History
       </button>
     </div>
 
-    <div v-if="pending" class="text-sm text-gray-400">Loading loan…</div>
+    <div v-if="pending" class="text-sm text-gray-400 flex items-center gap-2">
+      <Loader2 class="w-4 h-4 animate-spin" />
+      Loading loan...
+    </div>
     <div v-else-if="error" class="text-sm text-red-400">
       Failed to load loan details.
     </div>
 
-    <div v-else-if="loan" class="space-y-6">
+    <div v-else-if="loan && viewTab === 'info'" class="space-y-6">
       <div v-if="actionError" class="text-sm text-red-400">{{ actionError }}</div>
       <div v-if="actionSuccess" class="text-sm text-green-400">{{ actionSuccess }}</div>
 
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <p class="text-xs text-gray-400">Reference</p>
           <p class="text-sm">{{ loan.reference }}</p>
@@ -225,6 +401,10 @@ function getDownloadName(url: string, fallbackBase: string) {
           <p class="text-sm">{{ loan.durationMonths }} months</p>
         </div>
         <div>
+          <p class="text-xs text-gray-400">Quantity</p>
+          <p class="text-sm">{{ loan.quantity }}</p>
+        </div>
+        <div>
           <p class="text-xs text-gray-400">Start Date</p>
           <p class="text-sm">{{ formatDate(loan.startDate) }}</p>
         </div>
@@ -232,11 +412,73 @@ function getDownloadName(url: string, fallbackBase: string) {
           <p class="text-xs text-gray-400">End Date</p>
           <p class="text-sm">{{ formatDate(loan.endDate) }}</p>
         </div>
+        <div>
+          <p class="text-xs text-gray-400">Total Repayable</p>
+          <p class="text-sm">{{ formatCurrency(totalRepayable) }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Total Monthly Installment</p>
+          <p class="text-sm">{{ formatCurrency(totalMonthlyInstallment) }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Remaining Amount</p>
+          <p class="text-sm">{{ formatCurrency(remainingAmount) }}</p>
+        </div>
+      </div>
+
+      <div class="border-t border-white/5 pt-4">
+        <h2 class="text-sm font-medium mb-2">Reduce Total Repayable</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                name="repayableAdjustment"
+                value="monthly"
+                v-model="repayableAdjustmentMode"
+              />
+              <span>Use total monthly installment</span>
+            </label>
+            <label class="mt-3 flex items-center gap-2">
+              <input
+                type="radio"
+                name="repayableAdjustment"
+                value="custom"
+                v-model="repayableAdjustmentMode"
+              />
+              <span>Enter custom amount</span>
+            </label>
+            <div v-if="repayableAdjustmentMode === 'custom'" class="mt-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full border rounded px-3 py-2 text-sm"
+                v-model.number="customReductionAmount"
+                placeholder="0.00"
+              />
+            </div>
+            <button
+              class="mt-3 px-3 py-2 text-sm rounded bg-cyan-500 text-white disabled:bg-cyan-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="updatingRepayable || (repayableAdjustmentMode === 'custom' && (customReductionAmount === null || Number.isNaN(customReductionAmount)))"
+              @click="saveRemainingAmount"
+            >
+              <Loader2 v-if="updatingRepayable" class="w-4 h-4 animate-spin" />
+              {{ updatingRepayable ? 'Saving...' : 'Save remaining amount' }}
+            </button>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Reduction Amount</p>
+            <p class="text-sm">{{ formatCurrency(reductionAmount) }}</p>
+            <p class="text-xs text-gray-400 mt-3">Adjusted Total Repayable</p>
+            <p class="text-sm font-semibold">{{ formatCurrency(adjustedRepayable) }}</p>
+          </div>
+        </div>
       </div>
 
       <div class="border-t border-white/5 pt-4">
         <h2 class="text-sm font-medium mb-2">Client</h2>
-        <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <p class="text-xs text-gray-400">Name</p>
             <p>{{ loan.client.firstName }}</p>
@@ -270,6 +512,113 @@ function getDownloadName(url: string, fallbackBase: string) {
       </div>
 
       <div class="border-t border-white/5 pt-4">
+        <h2 class="text-sm font-medium mb-2">Penalties</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <button
+              v-if="loan.status === 'ACTIVE'"
+              class="px-3 py-2 text-sm rounded bg-cyan-500 text-white disabled:bg-cyan-200"
+              @click="penaltyModalOpen = true"
+            >
+              Manage Penalties
+            </button>
+            <p v-else class="text-xs text-gray-400">Penalties can only be applied to active loans.</p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="penaltyModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      >
+        <div class="w-full max-w-md rounded-lg bg-white p-6 text-black">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Apply Penalties</h2>
+            <button class="text-sm text-gray-500 hover:text-gray-700" @click="clearAndClosePenalties">
+              Close
+            </button>
+          </div>
+
+          <div class="space-y-4 text-sm">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" v-model="applyInstallmentPenalty" />
+              <span>5% installment penalty</span>
+            </label>
+            <div v-if="applyInstallmentPenalty">
+              <label class="text-xs text-gray-500">Penalty Months</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                v-model.number="penaltyMonths"
+              />
+              <label class="text-xs text-gray-500 mt-2 block">Reason</label>
+              <input
+                type="text"
+                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                v-model="penaltyReasonInstallment"
+                placeholder="Reason for penalty"
+              />
+            </div>
+
+            <label class="flex items-center gap-2">
+              <input type="checkbox" v-model="applyPeriodExtension" />
+              <span>Extend loan period</span>
+            </label>
+            <div v-if="applyPeriodExtension">
+              <label class="text-xs text-gray-500">Extension Months</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                v-model.number="extensionMonths"
+              />
+              <label class="text-xs text-gray-500 mt-2 block">Reason</label>
+              <input
+                type="text"
+                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                v-model="penaltyReasonExtension"
+                placeholder="Reason for extension"
+              />
+            </div>
+
+            <label class="flex items-center gap-2">
+              <input type="checkbox" v-model="applyFullRepayment" />
+              <span>Demand full repayment immediately</span>
+            </label>
+            <div v-if="applyFullRepayment">
+              <label class="text-xs text-gray-500 mt-2 block">Reason</label>
+              <input
+                type="text"
+                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                v-model="penaltyReasonFull"
+                placeholder="Reason for full repayment"
+              />
+            </div>
+          </div>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <button
+              class="px-3 py-2 text-sm rounded border"
+              @click="clearAndClosePenalties"
+            >
+              Clear & Close
+            </button>
+            <button
+              class="px-3 py-2 text-sm rounded bg-cyan-500 text-white disabled:bg-cyan-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="applyingPenalty || (applyInstallmentPenalty && !penaltyMonths) || (applyPeriodExtension && !extensionMonths)"
+              @click="applySelectedPenalties"
+            >
+              <Loader2 v-if="applyingPenalty" class="w-4 h-4 animate-spin" />
+              {{ applyingPenalty ? 'Applying...' : 'OK' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-white/5 pt-4">
         <h2 class="text-sm font-medium mb-2">Documents</h2>
         <div v-if="loan.documents.length" class="space-y-2 text-sm">
           <div v-for="doc in loan.documents" :key="doc.id" class="flex items-center justify-between">
@@ -298,27 +647,16 @@ function getDownloadName(url: string, fallbackBase: string) {
       <div class="border-t border-white/5 pt-4">
         <h2 class="text-sm font-medium mb-2">Contract</h2>
         <div class="mt-1 flex items-center gap-2">
-            <input
-              v-if="editingContract"
-              type="file"
-              accept="application/pdf"
-              class="w-[50%] text-sm"
-              @change="e => { contractFile = (e.target as HTMLInputElement).files?.[0] ?? null; updateContract() }"
-            />
-            <p v-else class="text-sm" :class="loan.contract? '': 'text-gray-400'">
-              <span class="inline-flex items-center gap-2">
-                <FileSignature class="w-4 text-cyan-500" />
-                {{ loan.contract ? 'Contract attached' : 'No contract attached' }}
+          <p class="text-sm" :class="loan.contract ? '' : 'text-gray-400'">
+            <span class="inline-flex items-center gap-2">
+              <FileSignature class="w-4 text-cyan-500" />
+              <span v-if="loan.contract">
+                {{ loan.contract.signed ? 'Signed contract' : 'Unsigned contract' }}
               </span>
-            </p>
-            <button
-              @click="toggleContractEdit"
-              class="text-xs text-cyan-500 hover:underline"
-            >
-              <X v-if="editingContract" class="w-4 text-red-400" />
-              <PencilLine v-else class="w-4 text-cyan-500" />
-            </button>
-          </div>
+              <span v-else>No contract attached</span>
+            </span>
+          </p>
+        </div>
         <div v-if="loan.contract" class="mt-2">
           <a
             :href="`/api/contracts/${loan.contract.id}/download`"
@@ -331,20 +669,121 @@ function getDownloadName(url: string, fallbackBase: string) {
             </span>
           </a>
         </div>
+        <div v-if="loan.contract" class="mt-2">
+          <button
+            class="text-cyan-400 text-xs hover:underline inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="emailingContract"
+            @click="emailContract"
+          >
+            <Loader2 v-if="emailingContract" class="w-3 h-3 animate-spin" />
+            {{ emailingContract ? 'Emailing...' : (loan.contract.signed ? 'Email signed contract' : 'Email unsigned contract') }}
+          </button>
+        </div>
+        <div class="mt-3">
+          <label class="block text-xs text-gray-400 mb-1">Upload signed contract (PDF)</label>
+          <input
+            type="file"
+            accept="application/pdf"
+            class="text-sm"
+            @change="e => { signedContractFile = (e.target as HTMLInputElement).files?.[0] ?? null; uploadSignedContract() }"
+          />
+        </div>
       </div>
 
       <div class="border-t border-white/5 pt-6 flex">
         <button
-          @click="deleteLoan"
+          @click="deleteModalOpen = true"
           :disabled="deletingLoan"
-          class="px-3 py-2 text-sm rounded bg-red-500 text-white disabled:bg-red-200 inline-flex items-center gap-2"
+          class="px-3 py-2 text-sm rounded bg-red-500 text-white disabled:bg-red-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Trash2 class="w-4" />
+          <Loader2 v-if="deletingLoan" class="w-4 h-4 animate-spin" />
+          <Trash2 v-else class="w-4" />
           {{ deletingLoan ? 'Deleting...' : 'Delete Loan' }}
         </button>
       </div>
     </div>
+
+    <div v-else-if="loan && viewTab === 'history'" class="space-y-4">
+      <div class="border rounded px-3 py-2 bg-white/5">
+        <h3 class="text-sm font-medium mb-2">Penalty History</h3>
+        <div v-if="loan.penalties?.length" class="space-y-2 text-sm">
+          <div
+            v-for="penalty in loan.penalties"
+            :key="penalty.id"
+            class="border rounded px-3 py-2 text-xs text-gray-600 bg-white/5"
+          >
+            <p class="text-gray-200">
+              {{
+                penalty.type === 'PERIOD_EXTENSION'
+                  ? `Period extension - ${penalty.months} months`
+                  : penalty.type === 'FULL_REPAYMENT'
+                    ? 'Full repayment demand'
+                    : `Installment penalty - ${penalty.months} months`
+              }}
+            </p>
+            <p v-if="penalty.type === 'INSTALLMENT_RATE'" class="text-gray-400">
+              Rate: {{ penalty.rate }}% - Amount: N$ {{ penalty.penaltyAmount.toLocaleString() }}
+            </p>
+            <p v-if="penalty.reason" class="text-gray-400">
+              Reason: {{ penalty.reason }}
+            </p>
+            <p class="text-gray-400">
+              Applied: {{ formatDate(penalty.createdAt) }}
+            </p>
+          </div>
+        </div>
+        <p v-else class="text-sm text-gray-400">No penalties applied.</p>
+      </div>
+
+      <div v-if="loan.activities?.length" class="space-y-2 text-sm">
+        <div
+          v-for="activity in loan.activities"
+          :key="activity.id"
+          class="border rounded px-3 py-2 bg-white/5"
+        >
+          <div class="flex items-center justify-between">
+            <p class="text-gray-200">
+              {{ activity.type.replace(/_/g, ' ') }}
+            </p>
+            <p class="text-xs text-gray-400">{{ formatDate(activity.createdAt) }}</p>
+          </div>
+          <p v-if="activity.details" class="text-xs text-gray-400 mt-1">
+            {{ activity.details }}
+          </p>
+          <p v-if="activity.performedBy" class="text-xs text-gray-400 mt-1">
+            By {{ activity.performedBy.name }} ({{ activity.performedBy.email }})
+          </p>
+        </div>
+      </div>
+      <p v-else class="text-sm text-gray-400">No activity history found.</p>
+    </div>
   </section>
+
+  <div
+    v-if="deleteModalOpen"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+  >
+    <div class="w-full max-w-md rounded-lg bg-white p-6 text-black">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Delete Loan</h2>
+        <button class="text-sm text-gray-500 hover:text-gray-700" @click="deleteModalOpen = false">
+          Close
+        </button>
+      </div>
+      <p class="text-sm text-gray-600">Are you sure you want to delete this loan? This cannot be undone.</p>
+      <div class="mt-4 flex justify-end gap-2">
+        <button class="px-3 py-2 text-sm rounded border" @click="deleteModalOpen = false">
+          Cancel
+        </button>
+        <button
+          class="px-3 py-2 text-sm rounded bg-red-500 text-white disabled:bg-red-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="deletingLoan"
+          @click="deleteLoan"
+        >
+          <Loader2 v-if="deletingLoan" class="w-4 h-4 animate-spin" />
+          {{ deletingLoan ? 'Deleting...' : 'OK' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
-
-

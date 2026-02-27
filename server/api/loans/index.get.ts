@@ -62,7 +62,10 @@ export default defineEventHandler(async (event) => {
       id: loan.id,
       client: `${loan.client.firstName}`,
       amount: Number(loan.principal),
+      interest: Number(loan.interestRate),
+      duration: loan.durationMonths,
       status: loan.status,
+      quantity: loan.quantity,
       due: loan.endDate
         ? loan.endDate.toISOString().split('T')[0]
         : '-'

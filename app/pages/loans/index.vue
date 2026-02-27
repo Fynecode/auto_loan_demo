@@ -2,10 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import sideNav from '~/components/sideNav.vue'
 import { useRouter } from 'vue-router'
+import { Loader2 } from 'lucide-vue-next'
 
 const router = useRouter()
 
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const sort = ref<'newest' | 'oldest'>('newest')
 const status = ref<'all' | 'completed' | 'drafted' | 'pending' | 'cancelled'>('all')
 const page = ref(1)
@@ -60,18 +61,16 @@ function nextPage() {
   <sideNav v-model:collapsed="sidebarCollapsed" />
 
   <section
-    class="p-6 transition-all duration-300"
-    :class="sidebarCollapsed ? 'ml-16' : 'ml-[20%]'"
+    class="pt-16 p-4 md:pt-6 md:p-6 transition-all duration-300"
+    :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-[20%]'"
   >
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-xl font-semibold">Loans</h1>
-      <button
-        @click="router.push('/createloan')"
-        class="flex items-center gap-2 px-3 py-1 rounded-lg bg-cyan-500 text-white text-sm hover:bg-cyan-600 transition-colors"
-      >
-        <span class="text-lg font-bold">+</span>
-        <span class="hidden sm:inline">New Loan</span>
-      </button>
+    </div>
+
+    <div v-if="pending" class="text-sm text-gray-400 flex items-center gap-2 py-3">
+      <Loader2 class="w-4 h-4 animate-spin" />
+      Loading loans...
     </div>
 
     <!-- Filters -->
@@ -104,39 +103,44 @@ function nextPage() {
       </div>
     </div>
 
-    <!-- Loan table header -->
-    <div class="grid grid-cols-5 text-xs text-gray-400 mb-2" v-if="loans && loans.items.length">
-      <span>Client</span>
-      <span>Amount</span>
-      <span>Status</span>
-      <span>Due Date</span>
-      <span></span>
-    </div>
+    <div v-if="loans && loans.items.length" class="overflow-x-auto">
+      <!-- Loan table header -->
+      <div class="grid grid-cols-4 md:grid-cols-6 text-xs text-gray-400 mb-2 min-w-[520px] md:min-w-[680px]">
+        <span>Client</span>
+        <span>Amount</span>
+        <span class="hidden md:block">Quantity</span>
+        <span>Status</span>
+        <span class="hidden md:block">Due Date</span>
+        <span>Actions</span>
+      </div>
 
-    <!-- Loan table rows -->
-    <div
-      v-if="loans && loans.items.length"
-      v-for="loan in loans.items"
-      :key="loan.id"
-      class="grid grid-cols-5 items-center py-3 border-t border-white/5 text-sm"
-    >
-      <span>{{ loan.client }}</span>
-      <span>N$ {{ loan.amount.toLocaleString() }}</span>
-      <span
-        :class="[
-          'px-2 py-1 rounded-full w-fit text-xs',
-          statusColor(loan.status)
-        ]"
+      <!-- Loan table rows -->
+      <div
+        v-for="loan in loans.items"
+        :key="loan.id"
+        class="grid grid-cols-4 md:grid-cols-6 items-center py-3 border-t border-white/5 text-sm min-w-[520px] md:min-w-[680px]"
       >
-        {{ loan.status }}
-      </span>
-      <span>{{ loan.due || '-' }}</span>
-      <button
-        class="text-xs text-cyan-400 hover:underline"
-        @click="router.push(`/loans/${loan.id}`)"
-      >
-        View
-      </button>
+        <span>{{ loan.client }}</span>
+        <span>N$ {{ loan.amount.toLocaleString() }}</span>
+        <span class="hidden md:block">{{ loan.quantity }}</span>
+        <span
+          :class="[
+            'px-2 py-1 rounded-full w-fit text-xs',
+            statusColor(loan.status)
+          ]"
+        >
+          {{ loan.status }}
+        </span>
+        <span class="hidden md:block">{{ loan.due || '-' }}</span>
+        <div class="flex items-center gap-2">
+          <button
+            class="text-xs text-cyan-400 hover:underline"
+            @click="router.push(`/loans/${loan.id}`)"
+          >
+            View
+          </button>
+        </div>
+      </div>
     </div>
 
     <div v-else-if="!pending" class="text-sm text-gray-400 border border-dashed rounded p-6">

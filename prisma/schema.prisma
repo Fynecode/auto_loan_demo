@@ -32,16 +32,24 @@ enum DocumentType {
   OTHER
 }
 
+enum DocumentStatus {
+  UPLOADED
+  EXTRACTED
+  FAILED
+  REVIEWED
+}
+
 enum UserRole {
   ADMIN
   STAFF
 }
 
+
 // CORE MODELS
 model Client {
   id            String   @id @default(uuid())
   firstName     String
-  lastName      String
+  empNumber      String
   email         String   @unique
   phone         String?
   idNumber      String?
@@ -73,12 +81,16 @@ model Loan {
 
   transitions     LoanTransition[]
   payments        Payment[]
+  Documents       Document[]
 }
 
 model Contract {
   id          String   @id @default(uuid())
   loanId      String   @unique
   fileUrl     String
+  publicId    String?
+  resourceType String?
+  format      String?
   signed      Boolean  @default(false)
   signedAt    DateTime?
 
@@ -89,14 +101,18 @@ model Contract {
 
 // SUPPORTING MODELS
 model Document {
-  id          String        @id @default(uuid())
-  clientId    String
-  type        DocumentType
-  fileUrl     String
+  id        String @id @default(uuid())
+  type      DocumentType
+  fileUrl   String
+  publicId  String?
+  resourceType String?
+  format    String?
+  clientId  String?
+  loanId    String?
+  loan      Loan?   @relation(fields: [loanId], references: [id])
+  client    Client?  @relation(fields: [clientId], references: [id])
 
-  uploadedAt  DateTime      @default(now())
-
-  client      Client        @relation(fields: [clientId], references: [id])
+  uploadedAt DateTime @default(now())
 }
 
 model Payment {
@@ -143,4 +159,18 @@ model Session {
   lastUsedAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model LoanDraft {
+  id          String   @id @default(uuid())
+
+  clientData  Json?
+  financialData Json?
+
+  documentUrls Json?
+
+  step        Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

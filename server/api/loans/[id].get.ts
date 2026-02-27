@@ -16,7 +16,18 @@ export default defineEventHandler(async (event) => {
     include: {
       client: true,
       Documents: true,
-      contract: true
+      contract: true,
+      penalties: {
+        orderBy: { createdAt: 'desc' }
+      },
+      activities: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { name: true, email: true }
+          }
+        }
+      }
     }
   })
 
@@ -33,6 +44,11 @@ export default defineEventHandler(async (event) => {
     principal: Number(loan.principal),
     interestRate: Number(loan.interestRate),
     durationMonths: loan.durationMonths,
+    totalAmountRepayable: Number(loan.totalAmountRepayable),
+    totalInterest: Number(loan.totalInterest),
+    totalMonthlyInstallment: Number(loan.totalMonthlyInstallment),
+    remainingAmount: Number(loan.remainingAmount),
+    quantity: loan.quantity,
     startDate: loan.startDate?.toISOString() ?? null,
     endDate: loan.endDate?.toISOString() ?? null,
     status: loan.status,
@@ -68,6 +84,29 @@ export default defineEventHandler(async (event) => {
           signedAt: loan.contract.signedAt?.toISOString() ?? null
         }
       : null
+    ,
+    penalties: loan.penalties.map(penalty => ({
+      id: penalty.id,
+      type: penalty.type,
+      rate: Number(penalty.rate),
+      months: penalty.months,
+      baseMonthlyInstallment: Number(penalty.baseMonthlyInstallment),
+      penaltyAmount: Number(penalty.penaltyAmount),
+      reason: penalty.reason,
+      createdAt: penalty.createdAt.toISOString()
+    })),
+    activities: loan.activities.map(activity => ({
+      id: activity.id,
+      type: activity.type,
+      details: activity.details,
+      performedBy: activity.user
+        ? {
+            name: activity.user.name,
+            email: activity.user.email
+          }
+        : null,
+      createdAt: activity.createdAt.toISOString()
+    }))
   }
 })
 

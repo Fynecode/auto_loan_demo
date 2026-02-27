@@ -4,7 +4,7 @@ import cloudinary from '~~/server/utils/cloudinary'
 import { createError, defineEventHandler } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const loanId = event.context.params?.id
   if (!loanId) {
@@ -50,6 +50,15 @@ export default defineEventHandler(async (event) => {
   await deleteFromCloudinary(assets)
 
   await prisma.$transaction(async (tx) => {
+    await tx.loanActivity.create({
+      data: {
+        loanId,
+        type: 'DELETED',
+        performedBy: user.id
+      }
+    })
+
+    await tx.loanQuantityHistory.deleteMany({ where: { loanId } })
     await tx.document.deleteMany({ where: { loanId } })
 
     if (loan.contractId) {

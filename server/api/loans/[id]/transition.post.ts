@@ -14,7 +14,7 @@ const allowedTransitions: Record<LoanStatus, LoanStatus[]> = {
 }
 
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const id = event.context.params?.id
   if (!id) {
@@ -45,9 +45,25 @@ export default defineEventHandler(async (event) => {
     updateData.startDate = startDate
     updateData.endDate = endDate
   }
+  if (nextStatus === 'COMPLETED') {
+    updateData.endDate = new Date()
+  }
 
-  return prisma.loan.update({
-    where: { id },
-    data: updateData
+  return prisma.$transaction(async (tx) => {
+    const updatedLoan = await tx.loan.update({
+      where: { id },
+      data: updateData
+    })
+
+    await tx.loanActivity.create({
+      data: {
+        loanId: id,
+        type: 'STATUS_UPDATED',
+        details: `${loan.status} -> ${nextStatus}`,
+        performedBy: user.id
+      }
+    })
+
+    return updatedLoan
   })
 })

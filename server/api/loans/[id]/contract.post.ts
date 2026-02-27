@@ -3,9 +3,10 @@ import { requireAuth } from '~~/server/utils/requireAuth'
 import cloudinary from '~~/server/utils/cloudinary'
 import { DocumentType } from '~~/app/generated/prisma/client'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
+import { validateUpload, allowedPdfOnly } from '~~/server/utils/uploadValidation'
 
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const loanId = event.context.params?.id
   if (!loanId) {
@@ -21,6 +22,7 @@ export default defineEventHandler(async (event) => {
   if (!contractFile?.data) {
     throw createError({ statusCode: 400, message: 'Missing contract file' })
   }
+  validateUpload(contractFile, allowedPdfOnly)
 
   const result = await prisma.$transaction(async (tx) => {
     const loan = await tx.loan.findUnique({
@@ -55,8 +57,8 @@ export default defineEventHandler(async (event) => {
           publicId: uploaded.publicId,
           resourceType: uploaded.resourceType,
           format: uploaded.format,
-          signed: false,
-          signedAt: null
+          signed: true,
+          signedAt: new Date()
         }
       })
     } else {
@@ -66,7 +68,9 @@ export default defineEventHandler(async (event) => {
           fileUrl: uploaded.url,
           publicId: uploaded.publicId,
           resourceType: uploaded.resourceType,
-          format: uploaded.format
+          format: uploaded.format,
+          signed: true,
+          signedAt: new Date()
         }
       })
 
@@ -75,6 +79,38 @@ export default defineEventHandler(async (event) => {
         data: { contractId: contractRecord.id }
       })
     }
+
+    if (loan.status !== 'ACTIVE') {
+      const startDate = new Date()
+      const endDate = new Date(startDate)
+      endDate.setMonth(endDate.getMonth() + loan.durationMonths)
+
+      await tx.loan.update({
+        where: { id: loan.id },
+        data: {
+          status: 'ACTIVE',
+          startDate,
+          endDate
+        }
+      })
+
+      await tx.loanActivity.create({
+        data: {
+          loanId: loan.id,
+          type: 'STATUS_UPDATED',
+          details: `${loan.status} -> ACTIVE`,
+          performedBy: user.id
+        }
+      })
+    }
+
+    await tx.loanActivity.create({
+      data: {
+        loanId: loan.id,
+        type: 'CONTRACT_UPLOADED',
+        performedBy: user.id
+      }
+    })
 
     return {
       contract: {
@@ -101,7 +137,7 @@ async function uploadToCloudinary(
   const uploadResult = await new Promise<any>((resolve, reject) => {
     cloudinary.uploader.upload_stream(
       {
-        folder: 'loan-documents',
+        folder: 'loan-contracts',
         resource_type: 'auto',
         use_filename: true,
         unique_filename: true
