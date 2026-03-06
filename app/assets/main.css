@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Manrope:wght@200..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #f6f4ef;
+    --bg-2: #f1ede6;
+    --surface: #ffffff;
+    --surface-2: #f8f7f4;
+    --text: #141414;
+    --muted: #6b7280;
+    --accent: #0ea5a4;
+    --accent-strong: #0f766e;
+    --danger: #ef4444;
+    --border: #e4e1d9;
+  }
+
+  html,
+  body,
+  #__nuxt {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Noto Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 420px at 10% -10%, #d9f3f2 0%, transparent 60%),
+      radial-gradient(1000px 520px at 100% 0%, #f4ede2 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  }
+
+  h1,
+  h2,
+  h3,
+  .heading {
+    font-family: 'Google Sans Flex', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    color: #111;
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply min-h-screen pt-16 px-4 pb-8 pl-20 transition-all duration-300;
+  }
+
+  .card {
+    @apply rounded-2xl border border-[color:var(--border)] bg-white/80 shadow-sm backdrop-blur;
+  }
+
+  .modal-card {
+    @apply rounded-2xl border border-[color:var(--border)] bg-white/90 shadow-2xl;
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-0.5;
+  }
+
+  .fade-in {
+    animation: fade-in-up 420ms ease both;
+  }
+
+  .card-muted {
+    @apply rounded-2xl border border-dashed border-[color:var(--border)] bg-white/60;
+  }
+
+  .section-title {
+    @apply text-lg md:text-xl font-semibold;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-[color:var(--border)] bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-200;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-cyan-600 text-white hover:bg-cyan-700;
+  }
+
+  .btn-outline {
+    @apply border border-[color:var(--border)] text-gray-700 hover:border-cyan-500 hover:text-cyan-700;
+  }
+
+  .btn-ghost {
+    @apply text-cyan-600 hover:text-cyan-700;
+  }
+
+  .table-head {
+    @apply text-xs uppercase tracking-wide text-gray-400;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
