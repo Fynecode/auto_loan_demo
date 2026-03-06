@@ -114,7 +114,14 @@ export default defineEventHandler(async (event) => {
         empNumber: existingClient.empNumber
       }
     : client
-  const contractData = await buildContractPayload(clientForContract, loan)
+  const totalClients = await prisma.client.count()
+  const clientNo = existingClient
+    ? await prisma.client.count({ where: { createdAt: { lt: existingClient.createdAt } } }) + 1
+    : totalClients + 1
+  const contractData = await buildContractPayload(clientForContract, loan, {
+    clientNo,
+    agrNo: reference
+  })
   const contractDocxBuffer = renderContractDocx(templateBuffer, contractData)
   const contractPdfBuffer = await convertDocxToPdf(contractDocxBuffer)
   const contractUpload = await uploadContractPdf(contractPdfBuffer)
@@ -142,20 +149,21 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: 'Failed to resolve client record' })
     }
 
-    const createdLoan = await tx.loan.create({
-      data: {
-        reference,
-        principal: amount,
-        interestRate: interest,
-        durationMonths: duration,
-        totalAmountRepayable: financials.totalAmountRepayable,
-        totalInterest: financials.totalInterest,
-        totalMonthlyInstallment: financials.totalMonthlyInstallment,
-        remainingAmount: financials.totalAmountRepayable,
-        quantity: quantityValue,
-        clientId: clientRecord.id
-      }
-    })
+      const createdLoan = await tx.loan.create({
+        data: {
+          reference,
+          principal: amount,
+          interestRate: interest,
+          durationMonths: duration,
+          totalAmountRepayable: financials.totalAmountRepayable,
+          totalInterest: financials.totalInterest,
+          totalMonthlyInstallment: financials.totalMonthlyInstallment,
+          remainingAmount: financials.totalAmountRepayable,
+          quantity: quantityValue,
+          clientId: clientRecord.id,
+          createdById: user.id
+        }
+      })
 
     await tx.loanActivity.create({
       data: {
@@ -198,6 +206,9 @@ export default defineEventHandler(async (event) => {
       where: { id: createdLoan.id },
       include: { client: true, Documents: true, contract: true }
     })
+  }, {
+    maxWait: 10000,
+    timeout: 20000
   })
 
   if (sendEmailPart?.data?.toString() === 'true') {

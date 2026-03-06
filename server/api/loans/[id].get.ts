@@ -4,15 +4,25 @@ import cloudinary from '~~/server/utils/cloudinary'
 import { createError, defineEventHandler } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const loanId = event.context.params?.id
   if (!loanId) {
     throw createError({ statusCode: 400, message: 'Missing loan id' })
   }
 
-  const loan = await prisma.loan.findUnique({
-    where: { id: loanId },
+  const loanWhere = user.role === 'ADMIN'
+    ? { id: loanId }
+    : {
+        id: loanId,
+        OR: [
+          { createdById: user.id },
+          { assignments: { some: { userId: user.id } } }
+        ]
+      }
+
+  const loan = await prisma.loan.findFirst({
+    where: loanWhere,
     include: {
       client: true,
       Documents: true,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import sideNav from '~/components/sideNav.vue'
 import { Download, FileText, FileSignature, PencilLine, Trash2, X, Loader2 } from 'lucide-vue-next'
@@ -41,6 +41,28 @@ const penaltyReasonFull = ref('')
 const viewTab = ref<'info' | 'history'>('info')
 const deleteModalOpen = ref(false)
 
+function closePenaltyModal() {
+  clearAndClosePenalties()
+}
+
+function closeDeleteModal() {
+  deleteModalOpen.value = false
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  if (penaltyModalOpen.value) closePenaltyModal()
+  if (deleteModalOpen.value) closeDeleteModal()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
 const allowedTransitions: Record<string, string[]> = {
   DRAFT: ['PENDING_APPROVAL', 'CANCELLED'],
   PENDING_APPROVAL: ['ACTIVE', 'CANCELLED'],
@@ -66,7 +88,7 @@ async function increaseQuantity() {
   if (!loan.value) return
   if (loan.value.status !== 'COMPLETED') {
     actionError.value = 'Quantity can only be increased for completed loans'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
     return
   }
   updatingQuantity.value = true
@@ -79,10 +101,10 @@ async function increaseQuantity() {
     })
     await refresh()
     actionSuccess.value = 'Quantity updated'
-    addToast('Loan updated', 'success')
+    addToast({ message: 'Loan updated', variant: 'success' })
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to update quantity'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
   } finally {
     updatingQuantity.value = false
   }
@@ -107,10 +129,10 @@ async function updateStatus() {
     selectedStatus.value = ''
     editingStatus.value = false
     actionSuccess.value = 'Status updated'
-    addToast('Loan updated', 'success')
+    addToast({ message: 'Loan updated', variant: 'success' })
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to update status'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
     editingStatus.value = false
   } finally {
     updatingStatus.value = false
@@ -145,10 +167,10 @@ async function uploadSignedContract() {
     await refresh()
     signedContractFile.value = null
     actionSuccess.value = 'Signed contract uploaded'
-    addToast('Loan updated', 'success')
+    addToast({ message: 'Loan updated', variant: 'success' })
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to upload signed contract'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
   } finally {
     updatingContract.value = false
   }
@@ -161,12 +183,12 @@ async function deleteLoan() {
   deletingLoan.value = true
   try {
     await $fetch(`/api/loans/${loanId.value}`, { method: 'DELETE' })
-    addToast('Loan deleted', 'success')
+    addToast({ message: 'Loan deleted', variant: 'success' })
     router.push('/dashboard')
     deleteModalOpen.value = false
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to delete loan'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
   } finally {
     deletingLoan.value = false
   }
@@ -182,10 +204,10 @@ async function emailContract() {
     actionSuccess.value = loan.value.contract.signed
       ? 'Signed contract emailed'
       : 'Unsigned contract emailed'
-    addToast('Loan updated', 'success')
+    addToast({ message: 'Loan updated', variant: 'success' })
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to email contract'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
   } finally {
     emailingContract.value = false
   }
@@ -222,6 +244,11 @@ function formatCurrency(value: number) {
 
 async function saveRemainingAmount() {
   if (!loan.value) return
+  if (loan.value.status !== 'ACTIVE') {
+    actionError.value = 'Remaining amount can only be updated for active loans'
+    addToast({ message: actionError.value, variant: 'error' })
+    return
+  }
   actionError.value = null
   actionSuccess.value = null
   updatingRepayable.value = true
@@ -232,10 +259,10 @@ async function saveRemainingAmount() {
     })
     await refresh()
     actionSuccess.value = 'Remaining amount updated'
-    addToast('Loan updated', 'success')
+    addToast({ message: 'Loan updated', variant: 'success' })
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to update remaining amount'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
   } finally {
     updatingRepayable.value = false
   }
@@ -254,7 +281,7 @@ async function applySelectedPenalties() {
         method: 'POST',
         body: {
           months: penaltyMonths.value,
-          type: 'INSTALLMENT_RATE',
+          type: 'INSTALLMENT_INCREASE',
           reason: penaltyReasonInstallment.value
         }
       }))
@@ -274,7 +301,7 @@ async function applySelectedPenalties() {
     if (applyFullRepayment.value) {
       requests.push($fetch(`/api/loans/${loan.value.id}/penalties`, {
         method: 'POST',
-        body: { type: 'FULL_REPAYMENT', reason: penaltyReasonFull.value }
+        body: { type: 'FULL_REPAYMENT_DEMAND', reason: penaltyReasonFull.value }
       }))
     }
 
@@ -286,11 +313,11 @@ async function applySelectedPenalties() {
     await Promise.all(requests)
     await refresh()
     actionSuccess.value = 'Penalty applied'
-    addToast('Loan updated', 'success')
+    addToast({ message: 'Loan updated', variant: 'success' })
     penaltyModalOpen.value = false
   } catch (e: any) {
     actionError.value = e?.data?.message ?? 'Failed to apply penalty'
-    addToast(actionError.value, 'error')
+    addToast({ message: actionError.value, variant: 'error' })
   } finally {
     applyingPenalty.value = false
   }
@@ -314,14 +341,14 @@ function clearAndClosePenalties() {
     v-model:collapsed="sidebarCollapsed"
   />
 
-  <section class="pt-16 p-4 md:pt-6 md:p-6 transition-all duration-300" :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-[20%]'">
+  <section class="page-shell" :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-64'">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-      <h1 class="text-xl font-semibold">Loan Details</h1>
+      <h1 class="text-2xl font-semibold heading">Loan Details</h1>
       <div class="flex items-center gap-3">
         <button
           @click="increaseQuantity"
           :disabled="updatingQuantity || loan?.status !== 'COMPLETED'"
-          class="px-3 py-1 rounded bg-cyan-500 text-white text-sm disabled:bg-cyan-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          class="btn btn-primary"
         >
           <Loader2 v-if="updatingQuantity" class="w-4 h-4 animate-spin" />
           {{ updatingQuantity ? 'Updating...' : '+ Quantity' }}
@@ -331,14 +358,14 @@ function clearAndClosePenalties() {
 
     <div class="flex items-center gap-3 mb-4">
       <button
-        class="px-3 py-1 rounded text-sm border"
+        class="btn btn-outline"
         :class="viewTab === 'info' ? 'border-cyan-500 text-cyan-500' : 'border-gray-300 text-gray-500'"
         @click="viewTab = 'info'"
       >
         Loan Info & Actions
       </button>
       <button
-        class="px-3 py-1 rounded text-sm border"
+        class="btn btn-outline"
         :class="viewTab === 'history' ? 'border-cyan-500 text-cyan-500' : 'border-gray-300 text-gray-500'"
         @click="viewTab = 'history'"
       >
@@ -369,7 +396,7 @@ function clearAndClosePenalties() {
             <select
               v-if="editingStatus"
               v-model="selectedStatus"
-              class="w-full border rounded px-3 py-2 text-sm"
+              class="input"
               @change="updateStatus"
             >
               <option value="">Select status</option>
@@ -428,6 +455,9 @@ function clearAndClosePenalties() {
 
       <div class="border-t border-white/5 pt-4">
         <h2 class="text-sm font-medium mb-2">Reduce Total Repayable</h2>
+        <p v-if="loan.status !== 'ACTIVE'" class="text-xs text-gray-400 mb-3">
+          Remaining amount can only be reduced when the loan is ACTIVE.
+        </p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <label class="flex items-center gap-2">
@@ -436,6 +466,7 @@ function clearAndClosePenalties() {
                 name="repayableAdjustment"
                 value="monthly"
                 v-model="repayableAdjustmentMode"
+                :disabled="loan.status !== 'ACTIVE'"
               />
               <span>Use total monthly installment</span>
             </label>
@@ -445,6 +476,7 @@ function clearAndClosePenalties() {
                 name="repayableAdjustment"
                 value="custom"
                 v-model="repayableAdjustmentMode"
+                :disabled="loan.status !== 'ACTIVE'"
               />
               <span>Enter custom amount</span>
             </label>
@@ -453,14 +485,15 @@ function clearAndClosePenalties() {
                 type="number"
                 min="0"
                 step="0.01"
-                class="w-full border rounded px-3 py-2 text-sm"
+                class="input"
                 v-model.number="customReductionAmount"
                 placeholder="0.00"
+                :disabled="loan.status !== 'ACTIVE'"
               />
             </div>
             <button
-              class="mt-3 px-3 py-2 text-sm rounded bg-cyan-500 text-white disabled:bg-cyan-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="updatingRepayable || (repayableAdjustmentMode === 'custom' && (customReductionAmount === null || Number.isNaN(customReductionAmount)))"
+              class="mt-3 btn btn-primary"
+              :disabled="loan.status !== 'ACTIVE' || updatingRepayable || (repayableAdjustmentMode === 'custom' && (customReductionAmount === null || Number.isNaN(customReductionAmount)))"
               @click="saveRemainingAmount"
             >
               <Loader2 v-if="updatingRepayable" class="w-4 h-4 animate-spin" />
@@ -517,7 +550,7 @@ function clearAndClosePenalties() {
           <div>
             <button
               v-if="loan.status === 'ACTIVE'"
-              class="px-3 py-2 text-sm rounded bg-cyan-500 text-white disabled:bg-cyan-200"
+              class="btn btn-primary"
               @click="penaltyModalOpen = true"
             >
               Manage Penalties
@@ -529,13 +562,13 @@ function clearAndClosePenalties() {
 
       <div
         v-if="penaltyModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       >
-        <div class="w-full max-w-md rounded-lg bg-white p-6 text-black">
+        <div class="modal-card w-full max-w-md p-6 text-black">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">Apply Penalties</h2>
-            <button class="text-sm text-gray-500 hover:text-gray-700" @click="clearAndClosePenalties">
-              Close
+            <button class="text-gray-500 hover:text-gray-700" @click="closePenaltyModal">
+              <X class="w-4 h-4" />
             </button>
           </div>
 
@@ -550,13 +583,13 @@ function clearAndClosePenalties() {
                 type="number"
                 min="1"
                 step="1"
-                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                class="input mt-2"
                 v-model.number="penaltyMonths"
               />
               <label class="text-xs text-gray-500 mt-2 block">Reason</label>
               <input
                 type="text"
-                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                class="input mt-2"
                 v-model="penaltyReasonInstallment"
                 placeholder="Reason for penalty"
               />
@@ -572,13 +605,13 @@ function clearAndClosePenalties() {
                 type="number"
                 min="1"
                 step="1"
-                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                class="input mt-2"
                 v-model.number="extensionMonths"
               />
               <label class="text-xs text-gray-500 mt-2 block">Reason</label>
               <input
                 type="text"
-                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                class="input mt-2"
                 v-model="penaltyReasonExtension"
                 placeholder="Reason for extension"
               />
@@ -592,7 +625,7 @@ function clearAndClosePenalties() {
               <label class="text-xs text-gray-500 mt-2 block">Reason</label>
               <input
                 type="text"
-                class="w-full border rounded px-3 py-2 text-sm mt-2"
+                class="input mt-2"
                 v-model="penaltyReasonFull"
                 placeholder="Reason for full repayment"
               />
@@ -601,13 +634,13 @@ function clearAndClosePenalties() {
 
           <div class="mt-5 flex justify-end gap-2">
             <button
-              class="px-3 py-2 text-sm rounded border"
+              class="btn btn-outline"
               @click="clearAndClosePenalties"
             >
               Clear & Close
             </button>
             <button
-              class="px-3 py-2 text-sm rounded bg-cyan-500 text-white disabled:bg-cyan-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              class="btn btn-primary"
               :disabled="applyingPenalty || (applyInstallmentPenalty && !penaltyMonths) || (applyPeriodExtension && !extensionMonths)"
               @click="applySelectedPenalties"
             >
@@ -691,10 +724,10 @@ function clearAndClosePenalties() {
       </div>
 
       <div class="border-t border-white/5 pt-6 flex">
-        <button
+          <button
           @click="deleteModalOpen = true"
           :disabled="deletingLoan"
-          class="px-3 py-2 text-sm rounded bg-red-500 text-white disabled:bg-red-200 inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          class="btn inline-flex items-center gap-2 bg-red-500 text-white hover:bg-red-600"
         >
           <Loader2 v-if="deletingLoan" class="w-4 h-4 animate-spin" />
           <Trash2 v-else class="w-4" />
@@ -705,7 +738,7 @@ function clearAndClosePenalties() {
 
     <div v-else-if="loan && viewTab === 'history'" class="space-y-4">
       <div class="border rounded px-3 py-2 bg-white/5">
-        <h3 class="text-sm font-medium mb-2">Penalty History</h3>
+        <h3 class="text-sm font-semibold mb-2 text-gray-900">Penalty History</h3>
         <div v-if="loan.penalties?.length" class="space-y-2 text-sm">
           <div
             v-for="penalty in loan.penalties"
@@ -732,7 +765,7 @@ function clearAndClosePenalties() {
             </p>
           </div>
         </div>
-        <p v-else class="text-sm text-gray-400">No penalties applied.</p>
+        <p v-else class="card-muted p-3 text-sm text-gray-500">No penalties applied.</p>
       </div>
 
       <div v-if="loan.activities?.length" class="space-y-2 text-sm">
@@ -755,24 +788,24 @@ function clearAndClosePenalties() {
           </p>
         </div>
       </div>
-      <p v-else class="text-sm text-gray-400">No activity history found.</p>
+      <p v-else class="card-muted p-3 text-sm text-gray-500">No activity history found.</p>
     </div>
   </section>
 
   <div
     v-if="deleteModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
   >
-    <div class="w-full max-w-md rounded-lg bg-white p-6 text-black">
+    <div class="modal-card w-full max-w-md p-6 text-black">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">Delete Loan</h2>
-        <button class="text-sm text-gray-500 hover:text-gray-700" @click="deleteModalOpen = false">
-          Close
+        <button class="text-gray-500 hover:text-gray-700" @click="closeDeleteModal">
+          <X class="w-4 h-4" />
         </button>
       </div>
       <p class="text-sm text-gray-600">Are you sure you want to delete this loan? This cannot be undone.</p>
       <div class="mt-4 flex justify-end gap-2">
-        <button class="px-3 py-2 text-sm rounded border" @click="deleteModalOpen = false">
+        <button class="px-3 py-2 text-sm rounded border" @click="closeDeleteModal">
           Cancel
         </button>
         <button

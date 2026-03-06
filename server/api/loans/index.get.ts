@@ -3,7 +3,7 @@ import { requireAuth } from '~~/server/utils/requireAuth'
 import { defineEventHandler, getQuery } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const query = getQuery(event)
   const page = Math.max(Number(query.page ?? 1), 1)
@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
     : { createdAt: 'desc' as const }
 
   const statusMap: Record<string, string> = {
+    active: 'ACTIVE',
     completed: 'COMPLETED',
     drafted: 'DRAFT',
     pending: 'PENDING_APPROVAL',
@@ -36,9 +37,19 @@ export default defineEventHandler(async (event) => {
       }
     : {}
 
+  const accessFilter = user.role === 'ADMIN'
+    ? {}
+    : {
+        OR: [
+          { createdById: user.id },
+          { assignments: { some: { userId: user.id } } }
+        ]
+      }
+
   const where = {
     ...(statusFilter ? { status: statusFilter } : {}),
-    ...(searchFilter as object)
+    ...(searchFilter as object),
+    ...(accessFilter as object)
   }
 
   const total = await prisma.loan.count({ where })

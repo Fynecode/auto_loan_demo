@@ -271,12 +271,12 @@
                 body: form,
                 responseType: 'arrayBuffer'
             })
-            addToast(sendEmail ? 'Loan saved and contract emailed' : 'Loan saved', 'success')
+            addToast({ message: sendEmail ? 'Loan saved and contract emailed' : 'Loan saved', variant: 'success' })
             goBackAfterSave()
 
         } catch (e: any) {
             error.value = e?.data?.message ?? 'Loan creation failed'
-            addToast(error.value, 'error')
+            addToast({ message: error.value, variant: 'error' })
         } finally {
             processing.value = false
         }
@@ -311,7 +311,7 @@
 </script>
 
 <template>
-    <div class="relative w-full min-h-screen mx-auto flex flex-col items-center py-6 overflow-x-hidden">
+    <div class="relative w-full min-h-screen mx-auto flex flex-col items-center py-6 px-4 md:px-16 overflow-x-hidden">
 
     <!-- Header -->
     <button
@@ -322,7 +322,7 @@
         <ArrowLeft class="w-5 h-5" />
     </button>
     <header class="flex items-center justify-center mb-6 w-full">
-        <h1 class="text-2xl font-semibold">Create Loan</h1>
+        <h1 class="text-3xl font-semibold heading">Create Loan</h1>
     </header>
 
     <div class="w-full max-w-2xl overflow-hidden">
@@ -344,7 +344,7 @@
 
         <!-- STEP 1: CLIENT -->
         <section class="w-full shrink-0">
-        <div class="rounded-2xl p-6 space-y-6 w-full">
+        <div class="card p-6 space-y-6 w-full">
             <div class="flex flex-col">
                 <h3 class="text-lg font-medium">Client Information</h3>
                 <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
@@ -352,30 +352,30 @@
 
             <div class="field">
                 <label class="text-sm">Full Name</label>
-                <input v-model="client.fullName" class="input" placeholder="Full Name" />
+                <input v-model="client.fullName" class="input" :class="error ? 'border-red-300' : ''" placeholder="Full Name" />
             </div>
             <div class="field">
                 <label class="text-sm">Email</label>
-                <input v-model="client.email" class="input" placeholder="Email" />
+                <input v-model="client.email" class="input" :class="error ? 'border-red-300' : ''" placeholder="Email" />
             </div>
             <div class="field">
                 <label class="text-sm">Phone</label>
-                <input type="tel" v-model="client.phone" class="input" placeholder="Phone" />
+                <input type="tel" v-model="client.phone" class="input" :class="error ? 'border-red-300' : ''" placeholder="Phone" />
             </div>
             <div class="field">
                 <label class="text-sm">ID Number</label>
-                <input v-model="client.idNumber" class="input" placeholder="ID Number" />
+                <input v-model="client.idNumber" class="input" :class="error ? 'border-red-300' : ''" placeholder="ID Number" />
             </div>
             <div class="field">
                 <label class="text-sm">Employment Number</label>
-                <input type="text" v-model="client.empNumber" class="input" placeholder="Employment number">
+                <input type="text" v-model="client.empNumber" class="input" :class="error ? 'border-red-300' : ''" placeholder="Employment number">
             </div>
         </div>
         </section>
 
         <!-- STEP 2: LOAN -->
         <section class="w-full shrink-0">
-        <div class="rounded-2xl p-6 space-y-4 w-full">
+        <div class="card p-6 space-y-4 w-full">
             <div class="flex flex-col">
                 <h3 class="text-lg font-medium">Loan Information</h3>
                 <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
@@ -383,29 +383,29 @@
 
             <div class="field">
                 <label class="text-sm">Amount</label>
-                <input type="number" v-model="loan.amount" class="input" placeholder="Amount" />
+                <input type="number" v-model="loan.amount" class="input" :class="error ? 'border-red-300' : ''" placeholder="Amount" />
             </div>
             <div class="field">
                 <label class="text-sm">Duration</label>
-                <input type="number" v-model="loan.duration" class="input" placeholder="Duration" />
+                <input type="number" v-model="loan.duration" class="input" :class="error ? 'border-red-300' : ''" placeholder="Duration" />
             </div>
             <div class="field">
                 <label class="text-sm">Interest %</label>
-                <input type="number" v-model="loan.interest" class="input" placeholder="Interest %" />
+                <input type="number" v-model="loan.interest" class="input" :class="error ? 'border-red-300' : ''" placeholder="Interest %" />
             </div>
             <div class="field">
                 <label class="text-sm">Monthly Salary</label>
-                <input type="number" v-model="loan.salary" class="input" placeholder="Monthly salary" />
+                <input type="number" v-model="loan.salary" class="input" :class="error ? 'border-red-300' : ''" placeholder="Monthly salary" />
             </div>
             <div class="field">
                 <label class="text-sm">Salary Deduction</label>
-                <input type="number" v-model="loan.deduction" class="input" placeholder="Salary Deduction" />
+                <input type="number" v-model="loan.deduction" class="input" :class="error ? 'border-red-300' : ''" placeholder="Salary Deduction" />
             </div>
         </div>
         </section>
 
         <section class="w-full shrink-0">
-        <div class="rounded-2xl p-6 space-y-4 w-full">
+        <div class="card p-6 space-y-4 w-full">
             <div class="flex flex-col">
                 <h3 class="text-lg font-medium">cont'</h3>
                 <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
@@ -413,22 +413,22 @@
 
             <div class="field">
                 <label class="text-sm">Bank</label>
-                <input type="text" v-model="fin.bank" class="input" placeholder="Bank"/>
+                <input type="text" v-model="fin.bank" class="input" :class="error ? 'border-red-300' : ''" placeholder="Bank"/>
             </div>
             <div class="field">
                 <label class="text-sm">Branch Code</label>
-                <input type="number" v-model="fin.branchCode" class="input" placeholder="Branch code" />
+                <input type="number" v-model="fin.branchCode" class="input" :class="error ? 'border-red-300' : ''" placeholder="Branch code" />
             </div>
             <div class="field">
                 <label class="text-sm">Account Number</label>
-                <input type="number" v-model="fin.accountNo" class="input" placeholder="Account number" />
+                <input type="number" v-model="fin.accountNo" class="input" :class="error ? 'border-red-300' : ''" placeholder="Account number" />
             </div>
         </div>
         </section>
 
         <!-- STEP 3: DOCUMENTS -->
         <section class="w-full shrink-0">
-        <div class=" rounded-2xl p-6 space-y-4 w-full">
+        <div class="card p-6 space-y-4 w-full">
 
             <div>
                 <h3 class="text-lg font-medium">Upload Documents</h3>
@@ -475,7 +475,7 @@
         </div>
         </section>
         <section class="w-full shrink-0" v-if="currentStep === 4">
-            <div class="rounded-2xl p-6 space-y-4 h-[80vh] flex flex-col w-full">
+            <div class="card p-6 space-y-4 h-[80vh] flex flex-col w-full">
 
                 <h3 class="text-lg font-medium">Contract Preview</h3>
 
@@ -497,8 +497,7 @@
             <button
                 @click="prev"
                 :disabled="currentStep === 0"
-                class="py-1 px-4 rounded transition-all"
-                :class="currentStep === 0 ? 'bg-blue-200' : 'bg-blue-400 cursor-pointer'"
+                class="btn btn-outline"
             >
                 Previous
             </button>
@@ -506,7 +505,7 @@
             <button
                 @click="forward"
                 :disabled="processing"
-                class="bg-blue-600 py-1 px-4 rounded cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn btn-primary"
             >
                 <Loader2 v-if="processing" class="w-4 h-4 animate-spin" />
                 {{ nextButtonLabel() }}
@@ -515,14 +514,14 @@
                 v-if="currentStep === 4"
                 @click="saveAndEmailContract"
                 :disabled="processing"
-                class="bg-blue-500 py-1 px-4 rounded cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn btn-primary"
             >
                 <Loader2 v-if="processing" class="w-4 h-4 animate-spin" />
                 Save and email contract
             </button>
         </div>
 
-        <button @click="cancel" class="text-sm text-red-400 py-1 px-4">
+        <button @click="cancel" class="btn text-sm text-red-500 hover:text-red-600">
             Cancel
         </button>
     </div>
@@ -532,7 +531,7 @@
 
 <style scoped>
     .input {
-        @apply border rounded-lg px-4 py-2 w-full;
+        @apply w-full rounded-lg border border-[color:var(--border)] bg-white px-4 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-200;
     }
     .field {
         display: flex;

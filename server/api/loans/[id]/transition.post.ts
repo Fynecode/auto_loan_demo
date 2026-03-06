@@ -22,7 +22,17 @@ export default defineEventHandler(async (event) => {
   }
   const { nextStatus } = await readBody(event)
 
-  const loan = await prisma.loan.findUnique({ where: { id } })
+  const loan = await prisma.loan.findFirst({
+    where: user.role === 'ADMIN'
+      ? { id }
+      : {
+          id,
+          OR: [
+            { createdById: user.id },
+            { assignments: { some: { userId: user.id } } }
+          ]
+        }
+  })
   if (!loan) {
     throw createError({ statusCode: 404, message: 'Loan not found' })
   }

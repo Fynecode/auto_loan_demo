@@ -11,8 +11,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Missing loan id' })
   }
 
-  const loan = await prisma.loan.findUnique({
-    where: { id: loanId },
+  const loanWhere = user.role === 'ADMIN'
+    ? { id: loanId }
+    : {
+        id: loanId,
+        OR: [
+          { createdById: user.id },
+          { assignments: { some: { userId: user.id } } }
+        ]
+      }
+
+  const loan = await prisma.loan.findFirst({
+    where: loanWhere,
     select: { id: true, contractId: true }
   })
 

@@ -6,6 +6,8 @@ import {
 } from 'h3'
 
 import { buildContractPayload } from '~~/server/utils/contractPayloadBuilder'
+import { prisma } from '~~/server/utils/prisma'
+import { generateLoanReference } from '~~/server/utils/generateLoanReference'
 import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer } from '~~/server/utils/contractTemplate'
 import { renderContractDocx, convertDocxToPdf } from '~~/server/utils/contractRenderer'
 
@@ -24,7 +26,25 @@ export default defineEventHandler(async (event) => {
 
   const { client, loan } = JSON.parse(payloadPart.data.toString())
 
-  const contractData = await buildContractPayload(client, loan)
+  const empString = String(client.empNumber ?? '')
+  const existingClient = await prisma.client.findFirst({
+    where: {
+      OR: [
+        ...(client.email ? [{ email: client.email }] : []),
+        ...(client.idNumber ? [{ idNumber: client.idNumber }] : []),
+        ...(empString ? [{ empNumber: empString }] : [])
+      ]
+    }
+  })
+
+  const totalClients = await prisma.client.count()
+  const clientNo = existingClient
+    ? await prisma.client.count({ where: { createdAt: { lt: existingClient.createdAt } } }) + 1
+    : totalClients + 1
+
+  const agrNo = await generateLoanReference()
+
+  const contractData = await buildContractPayload(client, loan, { clientNo, agrNo })
 
   try {
     const template = await getActiveContractTemplateOrThrow()

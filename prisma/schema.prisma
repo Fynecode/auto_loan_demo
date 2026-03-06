@@ -29,6 +29,7 @@ enum DocumentType {
   ID
   BANK_STATEMENT
   CONTRACT
+  PAYSLIP
   OTHER
 }
 
@@ -42,6 +43,21 @@ enum DocumentStatus {
 enum UserRole {
   ADMIN
   STAFF
+}
+
+enum LoanPenaltyType {
+  INSTALLMENT_INCREASE
+  FULL_REPAYMENT_DEMAND
+  PERIOD_EXTENSION
+}
+
+enum LoanActivityType {
+  CREATED
+  UPDATED
+  STATUS_UPDATED
+  CONTRACT_UPLOADED
+  PENALTY_APPLIED
+  NOTE_ADDED
 }
 
 
@@ -66,12 +82,20 @@ model Loan {
   principal       Decimal     @db.Decimal(10, 2)
   interestRate    Decimal     @db.Decimal(5, 2)
   durationMonths  Int
+  totalAmountRepayable Decimal @db.Decimal(10, 2)
+  totalInterest  Decimal     @db.Decimal(10, 2)
+  totalMonthlyInstallment Decimal @db.Decimal(10, 2)
+  remainingAmount Decimal   @db.Decimal(10, 2)
+  quantity       Int         @default(1)
   startDate       DateTime?
   endDate         DateTime?
   status          LoanStatus  @default(DRAFT)
 
   clientId        String
   client          Client      @relation(fields: [clientId], references: [id])
+
+  createdById     String?
+  createdBy       User?       @relation(fields: [createdById], references: [id])
 
   contractId      String?
   contract        Contract?
@@ -80,6 +104,9 @@ model Loan {
   updatedAt       DateTime    @updatedAt
 
   transitions     LoanTransition[]
+  penalties       LoanPenalty[]
+  activities      LoanActivity[]
+  assignments     LoanAssignment[]
   payments        Payment[]
   Documents       Document[]
 }
@@ -138,27 +165,104 @@ model LoanTransition {
   loan        Loan        @relation(fields: [loanId], references: [id])
 }
 
+model LoanPenalty {
+  id                    String           @id @default(uuid())
+  loanId                String
+  type                  LoanPenaltyType
+  rate                  Decimal          @db.Decimal(5, 2)
+  months                Int
+  baseMonthlyInstallment Decimal         @db.Decimal(10, 2)
+  penaltyAmount         Decimal          @db.Decimal(10, 2)
+  reason                String?
+  createdAt             DateTime         @default(now())
+
+  loan                  Loan             @relation(fields: [loanId], references: [id])
+
+  @@index([loanId])
+}
+
+model LoanActivity {
+  id          String           @id @default(uuid())
+  loanId      String
+  type        LoanActivityType
+  details     String?
+  performedBy String?
+  createdAt   DateTime         @default(now())
+
+  loan        Loan             @relation(fields: [loanId], references: [id])
+  user        User?            @relation(fields: [performedBy], references: [id])
+
+  @@index([loanId])
+  @@index([performedBy])
+}
+
 // INTERNAL USERS
 model User {
   id          String    @id @default(uuid())
+  name        String
   email       String    @unique
   password    String
   role        UserRole  @default(STAFF)
+  failedLoginAttempts Int      @default(0)
+  lockoutUntil DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   sessions    Session[]
+  activities  LoanActivity[]
+  createdLoans Loan[]
+  loanAssignments LoanAssignment[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model LoanAssignment {
+  id        String   @id @default(uuid())
+  loanId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  loan      Loan     @relation(fields: [loanId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([loanId, userId])
+  @@index([loanId])
+  @@index([userId])
 }
 
 model Session {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String?
+  revokedAt DateTime?
   expiresAt DateTime
   createdAt DateTime @default(now())
   lastUsedAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model ContractTemplate {
+  id           String   @id @default(uuid())
+  fileUrl      String
+  publicId     String?
+  resourceType String?
+  format       String?
+  isActive     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@unique([tokenHash])
 }
 
 model LoanDraft {

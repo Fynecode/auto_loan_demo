@@ -25,8 +25,16 @@ export default defineEventHandler(async (event) => {
   validateUpload(contractFile, allowedPdfOnly)
 
   const result = await prisma.$transaction(async (tx) => {
-    const loan = await tx.loan.findUnique({
-      where: { id: loanId },
+    const loan = await tx.loan.findFirst({
+      where: user.role === 'ADMIN'
+        ? { id: loanId }
+        : {
+            id: loanId,
+            OR: [
+              { createdById: user.id },
+              { assignments: { some: { userId: user.id } } }
+            ]
+          },
       include: { contract: true }
     })
 
