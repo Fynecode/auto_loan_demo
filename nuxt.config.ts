@@ -7,8 +7,6 @@ export default defineNuxtConfig({
   nitro: {
     externals: {
       inline: [
-        '~/app/generated/prisma/client',
-        'app/generated/prisma/client',
         '@prisma/adapter-pg'
       ]
     }
