@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import sideNav from '~/components/sideNav.vue'
 
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const sort = ref<'newest' | 'oldest'>('newest')
 const search = ref('')
 const page = ref(1)
@@ -42,11 +42,11 @@ function nextPage() {
   <sideNav v-model:collapsed="sidebarCollapsed" />
 
   <section
-    class="p-6 transition-all duration-300"
-    :class="sidebarCollapsed ? 'ml-16' : 'ml-[20%]'"
+    class="page-shell"
+    :class="sidebarCollapsed ? '' : 'md:pl-64'"
   >
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-semibold">Clients</h1>
+      <h1 class="text-2xl font-semibold heading">Clients</h1>
     </div>
 
     <!-- Filters -->
@@ -57,12 +57,12 @@ function nextPage() {
           v-model="search"
           type="text"
           placeholder="Name, email, phone..."
-          class="border rounded px-2 py-1 text-sm"
+          class="input"
         />
       </div>
       <div class="flex items-center gap-2">
         <label class="text-xs text-gray-400">Sort</label>
-        <select v-model="sort" class="border rounded px-2 py-1 text-sm">
+        <select v-model="sort" class="input">
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>
         </select>
@@ -70,7 +70,7 @@ function nextPage() {
     </div>
 
     <!-- Client table header -->
-    <div class="grid grid-cols-5 text-xs text-gray-400 mb-2" v-if="clients && clients.items.length">
+    <div class="hidden md:grid md:grid-cols-5 table-head mb-2" v-if="clients && clients.items.length">
       <span>Full Name</span>
       <span>Email</span>
       <span>Phone</span>
@@ -81,14 +81,23 @@ function nextPage() {
       v-if="clients && clients.items.length"
       v-for="client in clients.items"
       :key="client.id"
-      class="grid grid-cols-5 items-center py-3 border-t border-white/5 text-sm"
+      class="card p-3 mb-3 flex flex-col gap-2 text-sm hover-lift md:mb-0 md:rounded-none md:border-0 md:bg-transparent md:shadow-none md:p-0 md:grid md:grid-cols-5 md:items-center md:gap-0 md:border-t md:border-white/5 md:py-3"
     >
-      <span>{{ client.fullName }}</span>
-      <span>{{ client.email }}</span>
-      <span>{{ client.phone }}</span>
+      <div>
+        <p class="text-xs text-gray-400 md:hidden">Full Name</p>
+        <span>{{ client.fullName }}</span>
+      </div>
+      <div>
+        <p class="text-xs text-gray-400 md:hidden">Email</p>
+        <span>{{ client.email }}</span>
+      </div>
+      <div>
+        <p class="text-xs text-gray-400 md:hidden">Phone</p>
+        <span>{{ client.phone }}</span>
+      </div>
     </div>
 
-    <div v-else-if="!pending" class="text-sm text-gray-400 border border-dashed rounded p-6">
+    <div v-else-if="!pending" class="card-muted p-6 text-sm text-gray-500">
       No clients found.
     </div>
 
@@ -100,14 +109,14 @@ function nextPage() {
         <button
           @click="prevPage"
           :disabled="clients.page <= 1"
-          class="px-3 py-1 rounded border text-sm disabled:text-gray-300"
+          class="btn btn-outline"
         >
           Prev
         </button>
         <button
           @click="nextPage"
           :disabled="clients.page >= clients.totalPages"
-          class="px-3 py-1 rounded border text-sm disabled:text-gray-300"
+          class="btn btn-outline"
         >
           Next
         </button>

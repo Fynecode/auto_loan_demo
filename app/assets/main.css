@@ -48,7 +48,11 @@
 
 @layer components {
   .page-shell {
-    @apply min-h-screen pt-16 px-4 pb-8 pl-20 transition-all duration-300;
+    @apply min-h-screen pt-16 pb-8 pl-20 pr-4 md:pr-8 transition-all duration-300;
+  }
+
+  .page-shell-no-nav {
+    @apply min-h-screen pt-16 pb-8 px-16;
   }
 
   .card {

@@ -78,6 +78,11 @@
         router.back()
     }
 
+    function scrollToTop() {
+        if (typeof window === 'undefined') return
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     function nextButtonLabel() {
         if (currentStep.value === 3) return 'Preview contract'
         if (currentStep.value === 4) return 'Save loan'
@@ -128,21 +133,25 @@
 
         if (hasEmptyFields({ fullName, email, idNumber, empNumber, phone })) {
             error.value = 'Please fill all fields'
+            scrollToTop()
             return
         }
 
         if (!isValidEmail(email)) {
             error.value = 'Invalid email address'
+            scrollToTop()
             return
         }
 
         if (!isValidNamibianID(idNumber)) {
             error.value = 'Invalid Namibian ID number'
+            scrollToTop()
             return
         }
 
         if (!isValidNamibianPhone(phone)) {
             error.value = 'Invalid Namibian phone number'
+            scrollToTop()
             return
         }
 
@@ -159,11 +168,13 @@
 
         if (hasEmptyFields({ amount, duration, interest, salary, deduction })) {
             error.value = 'Please fill all fields'
+            scrollToTop()
             return
         }
 
         if (d > 6) {
             error.value = 'Loan duration may not exceed 6 months'
+            scrollToTop()
             return
         }
 
@@ -178,6 +189,7 @@
 
         if (hasEmptyFields({ bank, accountNo })) {
             error.value = 'Please fill all fields'
+            scrollToTop()
             return
         }
 
@@ -220,6 +232,7 @@
             return true
         } catch (e: any) {
             error.value = e?.data?.message ?? 'Loan creation failed'
+            scrollToTop()
             return false
         } finally {
             processing.value = false
@@ -235,6 +248,7 @@
             !documents.value.idCopy
         ) {
             error.value = 'Please upload all required documents'
+            scrollToTop()
             return
         }
 
@@ -277,6 +291,7 @@
         } catch (e: any) {
             error.value = e?.data?.message ?? 'Loan creation failed'
             addToast({ message: error.value, variant: 'error' })
+            scrollToTop()
         } finally {
             processing.value = false
         }
@@ -311,7 +326,7 @@
 </script>
 
 <template>
-    <div class="relative w-full min-h-screen mx-auto flex flex-col items-center py-6 px-4 md:px-16 overflow-x-hidden">
+    <div class="page-shell-no-nav relative w-full mx-auto flex flex-col items-center overflow-x-hidden">
 
     <!-- Header -->
     <button
@@ -321,8 +336,11 @@
     >
         <ArrowLeft class="w-5 h-5" />
     </button>
-    <header class="flex items-center justify-center mb-6 w-full">
+    <header class="flex flex-col items-center justify-center mb-6 w-full gap-3">
         <h1 class="text-3xl font-semibold heading">Create Loan</h1>
+        <div class="card-muted px-4 py-2 text-xs text-gray-600">
+            Email delivery is disabled in this demo. Contracts will not be emailed.
+        </div>
     </header>
 
     <div class="w-full max-w-2xl overflow-hidden">
@@ -436,9 +454,14 @@
             </div>
             
             <div class="relative border border-dashed h-12 flex flex-col rounded justify-center px-2">
-                <label class="flex flex-row gap-2 items-center">
+                <label class="flex flex-row gap-2 items-center w-full min-w-0">
                     <Upload size="20"/>
-                    {{ documents.idCopy?.name ?? 'Upload Id copy' }}
+                    <span
+                        class="truncate"
+                        :title="documents.idCopy?.name || ''"
+                    >
+                        {{ documents.idCopy?.name ?? 'Upload Id copy' }}
+                    </span>
                 </label>
                 <input
                     type="file"
@@ -448,9 +471,14 @@
                 />
             </div>
             <div class="relative border border-dashed h-12 flex flex-col rounded justify-center px-2">
-                <label class="flex flex-row gap-2 items-center">
+                <label class="flex flex-row gap-2 items-center w-full min-w-0">
                     <Upload size="20"/>
-                    {{ documents.payslips?.name ?? 'Upload Payslip' }}
+                    <span
+                        class="truncate"
+                        :title="documents.payslips?.name || ''"
+                    >
+                        {{ documents.payslips?.name ?? 'Upload Payslip' }}
+                    </span>
                 </label>
                 <input 
                     type="file" 
@@ -461,9 +489,14 @@
                 />
             </div>
             <div class="relative border border-dashed h-12 flex flex-col rounded justify-center px-2">
-                <label class="flex flex-row gap-2 items-center">
+                <label class="flex flex-row gap-2 items-center w-full min-w-0">
                     <Upload size="20"/>
-                    {{ documents.bankStatement?.name ?? 'Upload Bank Statement' }}
+                    <span
+                        class="truncate"
+                        :title="documents.bankStatement?.name || ''"
+                    >
+                        {{ documents.bankStatement?.name ?? 'Upload Bank Statement' }}
+                    </span>
                 </label>
                 <input
                     type="file" 

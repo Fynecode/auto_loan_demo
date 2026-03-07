@@ -36,7 +36,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center px-4 md:px-16">
+  <div class="page-shell-no-nav flex items-center justify-center">
     <form
       @submit.prevent="submit"
       class="w-full max-w-sm space-y-4 p-6 card"

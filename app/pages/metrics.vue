@@ -90,7 +90,7 @@ watch(
 <template>
   <sideNav v-model:collapsed="sidebarCollapsed" />
 
-  <section class="page-shell" :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-64'">
+  <section class="page-shell" :class="sidebarCollapsed ? '' : 'md:pl-64'">
     <div class="flex items-center justify-between mb-6 fade-in">
       <h1 class="text-2xl font-semibold heading">Metrics</h1>
       <p class="text-xs text-gray-500">Revenue & risk insights</p>

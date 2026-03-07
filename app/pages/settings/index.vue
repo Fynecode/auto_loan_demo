@@ -212,7 +212,7 @@ async function uploadTemplate() {
 
   <section
     class="page-shell"
-    :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-64'"
+    :class="sidebarCollapsed ? '' : 'md:pl-64'"
   >
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-semibold heading">Settings</h1>
@@ -333,16 +333,21 @@ async function uploadTemplate() {
       <div class="card p-4 w-full">
         <h2 class="text-sm font-semibold mb-3">Contract Template</h2>
         <p class="text-xs text-gray-500 mb-3">Upload a DOCX template to use for contract generation.</p>
-        <input
-          type="file"
-          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          @change="(e: any) => (templateFile = e.target.files?.[0] ?? null)"
-          class="text-xs"
-          :disabled="!isAdmin"
-        />
+        <div class="flex flex-col gap-2">
+          <label class="text-xs text-gray-500">Upload DOCX template</label>
+          <input
+            type="file"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            @change="(e: any) => (templateFile = e.target.files?.[0] ?? null)"
+            class="input text-xs"
+            :disabled="!isAdmin"
+          />
+        </div>
         <div class="mt-2 text-xs text-gray-500">
           <div v-if="templateFile">
-            Selected: {{ templateFile.name }} ({{ Math.round(templateFile.size / 1024) }} KB)
+            <span class="block truncate" :title="templateFile.name">
+              Selected: {{ templateFile.name }} ({{ Math.round(templateFile.size / 1024) }} KB)
+            </span>
           </div>
           <div v-else-if="templateData?.fileUrl" class="flex flex-col gap-1">
             <span>
