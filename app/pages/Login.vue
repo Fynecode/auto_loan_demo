@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Eye, EyeOff, Loader2 } from 'lucide-vue-next'
 
 const email = ref('')
 const password = ref('')
-const showPassword = ref(false)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const { fetchUser } = useAuth()
@@ -38,44 +36,28 @@ async function submit() {
 </script>
 
 <template>
-  <div class="page-shell-no-nav flex items-center justify-center">
+  <div class="min-h-screen flex items-center justify-center">
     <form
       @submit.prevent="submit"
-      class="card w-full max-w-sm space-y-4 p-6"
+      class="w-full max-w-sm space-y-4 p-6 border rounded"
     >
-      <h1 class="text-xl font-semibold heading">Sign in</h1>
-      <div class="card-muted p-3 text-xs text-gray-600">
-        <p class="font-medium text-gray-700">Demo access</p>
-        <p>Admin: admin@greenline.local</p>
-        <p>Staff: staff@greenline.local</p>
-        <p>Password: use the assigned demo password.</p>
-      </div>
+      <h1 class="text-xl font-semibold">Sign in</h1>
 
       <input
         v-model="email"
         type="email"
         placeholder="Email"
-        class="input"
+        class="w-full border p-2 rounded"
         required
       />
 
-      <div class="relative">
-        <input
-          v-model="password"
-          :type="showPassword ? 'text' : 'password'"
-          placeholder="Password"
-          class="input pr-10"
-          required
-        />
-        <button
-          type="button"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-          @click="showPassword = !showPassword"
-        >
-          <EyeOff v-if="showPassword" class="w-4 h-4" />
-          <Eye v-else class="w-4 h-4" />
-        </button>
-      </div>
+      <input
+        v-model="password"
+        type="password"
+        placeholder="Password"
+        class="w-full border p-2 rounded"
+        required
+      />
 
       <p v-if="error" class="text-red-600 text-sm">
         {{ error }}
@@ -84,17 +66,10 @@ async function submit() {
       <button
         type="submit"
         :disabled="loading"
-        class="btn btn-primary w-full"
+        class="w-full bg-black text-white py-2 rounded"
       >
-        <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
         {{ loading ? 'Signing in…' : 'Sign in' }}
       </button>
-
-      <div class="flex items-center justify-between text-xs">
-        <NuxtLink to="/forgot-password" class="text-cyan-500 hover:underline">
-          Forgot password?
-        </NuxtLink>
-      </div>
     </form>
   </div>
 </template>
