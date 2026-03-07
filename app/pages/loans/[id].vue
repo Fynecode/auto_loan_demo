@@ -341,7 +341,7 @@ function clearAndClosePenalties() {
     v-model:collapsed="sidebarCollapsed"
   />
 
-  <section class="page-shell" :class="sidebarCollapsed ? '' : 'md:pl-64'">
+  <section class="page-shell" :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-64'">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
       <h1 class="text-2xl font-semibold heading">Loan Details</h1>
       <div class="flex items-center gap-3">
@@ -562,7 +562,7 @@ function clearAndClosePenalties() {
 
       <div
         v-if="penaltyModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       >
         <div class="modal-card w-full max-w-md p-6 text-black">
           <div class="flex items-center justify-between mb-4">
@@ -720,13 +720,6 @@ function clearAndClosePenalties() {
             class="text-sm"
             @change="e => { signedContractFile = (e.target as HTMLInputElement).files?.[0] ?? null; uploadSignedContract() }"
           />
-          <span
-            v-if="signedContractFile"
-            class="mt-1 block text-xs text-gray-500 truncate"
-            :title="signedContractFile.name"
-          >
-            {{ signedContractFile.name }}
-          </span>
         </div>
       </div>
 
@@ -744,7 +737,7 @@ function clearAndClosePenalties() {
     </div>
 
     <div v-else-if="loan && viewTab === 'history'" class="space-y-4">
-      <div class="card p-4">
+      <div class="border rounded px-3 py-2 bg-white/5">
         <h3 class="text-sm font-semibold mb-2 text-gray-900">Penalty History</h3>
         <div v-if="loan.penalties?.length" class="space-y-2 text-sm">
           <div
@@ -752,7 +745,7 @@ function clearAndClosePenalties() {
             :key="penalty.id"
             class="border rounded px-3 py-2 text-xs text-gray-600 bg-white/5"
           >
-            <p class="text-gray-800">
+            <p class="text-gray-200">
               {{
                 penalty.type === 'PERIOD_EXTENSION'
                   ? `Period extension - ${penalty.months} months`
@@ -761,13 +754,13 @@ function clearAndClosePenalties() {
                     : `Installment penalty - ${penalty.months} months`
               }}
             </p>
-            <p v-if="penalty.type === 'INSTALLMENT_RATE'" class="text-gray-500">
+            <p v-if="penalty.type === 'INSTALLMENT_RATE'" class="text-gray-400">
               Rate: {{ penalty.rate }}% - Amount: N$ {{ penalty.penaltyAmount.toLocaleString() }}
             </p>
-            <p v-if="penalty.reason" class="text-gray-500">
+            <p v-if="penalty.reason" class="text-gray-400">
               Reason: {{ penalty.reason }}
             </p>
-            <p class="text-gray-500">
+            <p class="text-gray-400">
               Applied: {{ formatDate(penalty.createdAt) }}
             </p>
           </div>
@@ -779,18 +772,18 @@ function clearAndClosePenalties() {
         <div
           v-for="activity in loan.activities"
           :key="activity.id"
-          class="card p-3"
+          class="border rounded px-3 py-2 bg-white/5"
         >
           <div class="flex items-center justify-between">
-            <p class="text-gray-800">
+            <p class="text-gray-200">
               {{ activity.type.replace(/_/g, ' ') }}
             </p>
-            <p class="text-xs text-gray-500">{{ formatDate(activity.createdAt) }}</p>
+            <p class="text-xs text-gray-400">{{ formatDate(activity.createdAt) }}</p>
           </div>
-          <p v-if="activity.details" class="text-xs text-gray-500 mt-1">
+          <p v-if="activity.details" class="text-xs text-gray-400 mt-1">
             {{ activity.details }}
           </p>
-          <p v-if="activity.performedBy" class="text-xs text-gray-500 mt-1">
+          <p v-if="activity.performedBy" class="text-xs text-gray-400 mt-1">
             By {{ activity.performedBy.name }} ({{ activity.performedBy.email }})
           </p>
         </div>
@@ -801,7 +794,7 @@ function clearAndClosePenalties() {
 
   <div
     v-if="deleteModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
   >
     <div class="modal-card w-full max-w-md p-6 text-black">
       <div class="flex items-center justify-between mb-4">

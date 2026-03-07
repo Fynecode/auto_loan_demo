@@ -137,7 +137,7 @@ async function unassignStaff(userId: string) {
 
   <section
     class="page-shell"
-    :class="sidebarCollapsed ? '' : 'md:pl-64'"
+    :class="sidebarCollapsed ? 'ml-0 md:ml-16' : 'ml-0 md:ml-64'"
   >
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-semibold heading">Loans</h1>
