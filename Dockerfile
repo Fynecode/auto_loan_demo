@@ -22,6 +22,7 @@ RUN apt-get update \
 
 COPY --from=build /app/.output ./.output
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/node_modules/.prisma /app/.output/server/node_modules/.prisma
 COPY --from=build /app/package.json ./package.json
 
 EXPOSE 3000
