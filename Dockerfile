@@ -22,8 +22,11 @@ RUN apt-get update \
 
 COPY --from=build /app/.output ./.output
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/node_modules/.prisma /app/.output/server/node_modules/.prisma
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/prisma ./prisma
+
+# Ensure Prisma client is generated for the runtime environment
+RUN npx prisma generate
 
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
