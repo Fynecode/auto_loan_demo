@@ -26,7 +26,10 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/prisma ./prisma
 
 # Ensure Prisma client is generated for the runtime environment
-RUN npx prisma generate
+# and copy engines into Nitro output node_modules
+RUN npx prisma generate \
+  && mkdir -p ./.output/server/node_modules/.prisma \
+  && cp -r ./node_modules/.prisma/* ./.output/server/node_modules/.prisma/
 
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
