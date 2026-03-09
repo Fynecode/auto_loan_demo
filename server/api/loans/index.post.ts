@@ -7,7 +7,7 @@ import { buildContractPayload, calculateLoanFinancials, DEFAULT_DEDUCTION_FEE } 
 import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer } from '~~/server/utils/contractTemplate'
 import { renderContractDocx, convertDocxToPdf } from '~~/server/utils/contractRenderer'
 import { sendLoanContractEmail } from '~~/server/utils/resend'
-import { DocumentType } from '~~/app/generated/prisma/client'
+import { DocumentType } from '~~/prisma/generated/client/index.js'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
 import { validateUpload, allowedPdfDocx, allowedIdCopy } from '~~/server/utils/uploadValidation'
 
@@ -281,3 +281,4 @@ async function uploadContractPdf(
     format: uploadResult.format
   }
 }
+

@@ -1,4 +1,4 @@
-import { UserRole } from '~~/app/generated/prisma/client'
+import { UserRole } from '~~/prisma/generated/client/index.js'
 import type { H3Event } from 'h3'
 
 export function requireRole(
@@ -13,3 +13,4 @@ export function requireRole(
 
   return user
 }
+
