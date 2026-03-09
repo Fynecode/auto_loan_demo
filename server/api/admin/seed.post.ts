@@ -5,10 +5,9 @@ import { requireRole } from '~~/server/utils/requireRole'
 import { UserRole } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {
-  requireRole(event, ['ADMIN'])
-
   const existingUsers = await prisma.user.count()
   if (existingUsers > 0) {
+    requireRole(event, ['ADMIN'])
     throw createError({ statusCode: 400, message: 'Seed already performed.' })
   }
 

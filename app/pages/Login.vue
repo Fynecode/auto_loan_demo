@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Eye, EyeOff, Loader2 } from 'lucide-vue-next'
+import { useToast } from '~/composables/useToast'
 
 const email = ref('')
 const password = ref('')
@@ -9,6 +10,7 @@ const showPassword = ref(false)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const { fetchUser } = useAuth()
+const { addToast } = useToast()
 
 const router = useRouter()
 
@@ -33,6 +35,19 @@ async function submit() {
     error.value = err?.data?.message ?? 'Invalid credentials'
   } finally {
     loading.value = false
+  }
+}
+
+const seeding = ref(false)
+async function seedDemoUsers() {
+  seeding.value = true
+  try {
+    await $fetch('/api/admin/seed', { method: 'POST' })
+    addToast({ message: 'Demo users created. You can sign in now.', variant: 'success' })
+  } catch (err: any) {
+    addToast({ message: err?.data?.message ?? 'Unable to seed demo users.', variant: 'error' })
+  } finally {
+    seeding.value = false
   }
 }
 </script>
@@ -95,6 +110,16 @@ async function submit() {
           Forgot password?
         </NuxtLink>
       </div>
+
+      <button
+        type="button"
+        :disabled="seeding"
+        class="btn btn-outline w-full"
+        @click="seedDemoUsers"
+      >
+        <Loader2 v-if="seeding" class="w-4 h-4 animate-spin" />
+        {{ seeding ? 'Creating demo users...' : 'Create demo users' }}
+      </button>
     </form>
   </div>
 </template>
