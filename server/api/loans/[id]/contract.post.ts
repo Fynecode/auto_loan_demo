@@ -1,7 +1,7 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import cloudinary from '~~/server/utils/cloudinary'
-import { DocumentType } from '~~/prisma/generated/client/index.js'
+import { DocumentType } from '@prisma/client'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
 import { validateUpload, allowedPdfOnly } from '~~/server/utils/uploadValidation'
 
@@ -165,4 +165,5 @@ async function uploadToCloudinary(
     format: uploadResult.format
   }
 }
+
 

@@ -1,7 +1,7 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import { createError, defineEventHandler, readBody } from 'h3'
-import { LoanPenaltyType } from '~~/prisma/generated/client/index.js'
+import { LoanPenaltyType } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
@@ -114,4 +114,5 @@ export default defineEventHandler(async (event) => {
 
   return penalty
 })
+
 

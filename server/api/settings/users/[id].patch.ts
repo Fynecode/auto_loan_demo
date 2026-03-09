@@ -1,7 +1,7 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import { createError, defineEventHandler, readBody } from 'h3'
-import { UserRole } from '~~/prisma/generated/client/index.js'
+import { UserRole } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {
   const currentUser = requireAuth(event)
@@ -40,4 +40,5 @@ export default defineEventHandler(async (event) => {
     }
   })
 })
+
 

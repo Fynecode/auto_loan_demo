@@ -1,6 +1,6 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
-import { LoanStatus } from '~~/prisma/generated/client/index.js'
+import { LoanStatus } from '@prisma/client'
 import { createError, defineEventHandler, readBody } from 'h3'
 
 const allowedTransitions: Record<LoanStatus, LoanStatus[]> = {
@@ -77,4 +77,5 @@ export default defineEventHandler(async (event) => {
     return updatedLoan
   })
 })
+
 

@@ -1,7 +1,7 @@
 import { defineEventHandler, getQuery } from 'h3'
 import { prisma } from '~~/server/utils/prisma'
 import { requireRole } from '~~/server/utils/requireRole'
-import { LoanPenaltyType, LoanStatus } from '~~/prisma/generated/client/index.js'
+import { LoanPenaltyType, LoanStatus } from '@prisma/client'
 
 type MonthBucket = {
   key: string
@@ -240,3 +240,4 @@ export default defineEventHandler(async (event) => {
     }
   }
 })
+

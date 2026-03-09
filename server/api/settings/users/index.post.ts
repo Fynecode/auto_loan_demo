@@ -1,7 +1,7 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import { createError, defineEventHandler, readBody } from 'h3'
-import { UserRole } from '~~/prisma/generated/client/index.js'
+import { UserRole } from '@prisma/client'
 import bcrypt from 'bcrypt'
 
 export default defineEventHandler(async (event) => {
@@ -47,4 +47,5 @@ export default defineEventHandler(async (event) => {
     }
   })
 })
+
 
