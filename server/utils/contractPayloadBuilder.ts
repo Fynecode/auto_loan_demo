@@ -79,7 +79,7 @@ export function buildContractPayload(
   const baseFee = durationMonths > 0 ? principal / durationMonths : 0
   const levy = principal * 0.0103
 
-  return {
+  const payload = {
     clientNo: options.clientNo,
     agrNo: options.agrNo,
     empNo: client.empNumber ?? '',
@@ -97,5 +97,30 @@ export function buildContractPayload(
     accountNo: loan.accountNumber ?? '',
     branchNo: loan.branchCode ?? '',
     rate: round2(interestRate)
+  }
+
+  const tableRows = [
+    { label: 'Client No', value: String(payload.clientNo) },
+    { label: 'Agreement No', value: String(payload.agrNo) },
+    { label: 'Employment No', value: String(payload.empNo) },
+    { label: 'ID No', value: String(payload.idNo) },
+    { label: 'Full Name', value: String(payload.fullName) },
+    { label: 'Principal Amount', value: formatCurrency(principal) },
+    { label: 'Levy (1.03%)', value: formatCurrency(payload.levy) },
+    { label: 'Finance Charges', value: formatCurrency(payload.finCharges) },
+    { label: 'Total Repayable', value: formatCurrency(payload.amountRepay) },
+    { label: 'Base Installment', value: formatCurrency(payload.baseFee) },
+    { label: 'Deduction Fee', value: formatCurrency(payload.deduction) },
+    { label: 'Total Monthly Installment', value: formatCurrency(payload.totalFee) },
+    { label: 'Loan Period (Months)', value: String(payload.period) },
+    { label: 'Bank', value: String(payload.bank) },
+    { label: 'Account No', value: String(payload.accountNo) },
+    { label: 'Branch Code', value: String(payload.branchNo) },
+    { label: 'Interest Rate (%)', value: String(payload.rate) }
+  ]
+
+  return {
+    ...payload,
+    tableRows
   }
 }
