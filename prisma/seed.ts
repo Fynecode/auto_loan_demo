@@ -1,5 +1,5 @@
-import { PrismaClient, UserRole } from '../app/generated/prisma/client'
-import { PrismaPg } from "@prisma/adapter-pg"
+import { PrismaClient, UserRole } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcrypt'
 
 const adapter = new PrismaPg({
@@ -15,11 +15,13 @@ async function main() {
   await prisma.user.createMany({
     data: [
       {
+        name: 'Admin User',
         email: 'admin@greenline.local',
         password: adminPassword,
         role: UserRole.ADMIN,
       },
       {
+        name: 'Staff User',
         email: 'staff@greenline.local',
         password: staffPassword,
         role: UserRole.STAFF,
