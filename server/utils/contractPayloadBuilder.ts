@@ -59,7 +59,7 @@ export function calculateLoanFinancials(
   }
 }
 
-export function buildContractPayload(
+export async function buildContractPayload(
   client: ClientPayload,
   loan: LoanPayload,
   options: { clientNo: number; agrNo: string }
@@ -95,7 +95,7 @@ export function buildContractPayload(
     period: durationMonths,
     bank: loan.bank ?? '',
     accountNo: loan.accountNumber ?? '',
-    branchNo: loan.branchCode ?? '',
+    branchCode: loan.branchCode ?? '',
     rate: round2(interestRate)
   }
 
