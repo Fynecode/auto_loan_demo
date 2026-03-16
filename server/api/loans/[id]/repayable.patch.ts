@@ -33,24 +33,45 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Loan must be ACTIVE to update remaining amount' })
   }
 
-  const isCompleted = remainingAmount === 0
-  const updated = await prisma.loan.update({
-    where: { id: loanId },
-    data: {
-      remainingAmount,
-      ...(isCompleted ? { status: 'COMPLETED', endDate: new Date() } : {})
-    }
-  })
+  if (remainingAmount > Number(loan.remainingAmount)) {
+    throw createError({ statusCode: 400, message: 'Remaining amount cannot increase' })
+  }
 
-  await prisma.loanActivity.create({
-    data: {
-      loanId,
-      type: isCompleted ? 'STATUS_UPDATED' : 'UPDATED',
-      details: isCompleted
-        ? 'ACTIVE -> COMPLETED (remaining amount cleared)'
-        : `Remaining amount updated to ${remainingAmount}`,
-      performedBy: user.id
-    }
+  const reductionAmount = Number(loan.remainingAmount) - remainingAmount
+  if (reductionAmount <= 0) {
+    throw createError({ statusCode: 400, message: 'Remaining amount must decrease' })
+  }
+
+  const isCompleted = remainingAmount === 0
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedLoan = await tx.loan.update({
+      where: { id: loanId },
+      data: {
+        remainingAmount,
+        ...(isCompleted ? { status: 'COMPLETED', endDate: new Date() } : {})
+      }
+    })
+
+    await tx.payment.create({
+      data: {
+        loanId,
+        amount: reductionAmount,
+        paidAt: new Date()
+      }
+    })
+
+    await tx.loanActivity.create({
+      data: {
+        loanId,
+        type: isCompleted ? 'STATUS_UPDATED' : 'UPDATED',
+        details: isCompleted
+          ? 'ACTIVE -> COMPLETED (remaining amount cleared)'
+          : `Payment recorded: N$ ${reductionAmount.toLocaleString()}`,
+        performedBy: user.id
+      }
+    })
+
+    return updatedLoan
   })
 
   return updated

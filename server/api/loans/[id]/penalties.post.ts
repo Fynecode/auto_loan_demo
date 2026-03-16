@@ -1,7 +1,9 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import { createError, defineEventHandler, readBody } from 'h3'
-import { LoanPenaltyType } from '@prisma/client'
+import pkg from '@prisma/client'
+
+const { LoanPenaltyType } = pkg
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)

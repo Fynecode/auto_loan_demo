@@ -27,6 +27,10 @@ export default defineEventHandler(async (event) => {
       client: true,
       Documents: true,
       contract: true,
+      payments: {
+        orderBy: { paidAt: 'desc' },
+        include: { documents: true }
+      },
       penalties: {
         orderBy: { createdAt: 'desc' }
       },
@@ -104,6 +108,18 @@ export default defineEventHandler(async (event) => {
       penaltyAmount: Number(penalty.penaltyAmount),
       reason: penalty.reason,
       createdAt: penalty.createdAt.toISOString()
+    })),
+    payments: loan.payments.map(payment => ({
+      id: payment.id,
+      amount: Number(payment.amount),
+      paidAt: payment.paidAt.toISOString(),
+      documents: payment.documents.map(doc => ({
+        id: doc.id,
+        type: doc.type,
+        fileUrl: doc.fileUrl,
+        signedUrl: getSignedUrlFromMeta(doc.publicId, doc.resourceType, doc.format, doc.fileUrl, expiresAt),
+        uploadedAt: doc.uploadedAt.toISOString()
+      }))
     })),
     activities: loan.activities.map(activity => ({
       id: activity.id,

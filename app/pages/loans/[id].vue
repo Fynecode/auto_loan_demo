@@ -38,8 +38,10 @@ const applyFullRepayment = ref(false)
 const penaltyReasonInstallment = ref('')
 const penaltyReasonExtension = ref('')
 const penaltyReasonFull = ref('')
-const viewTab = ref<'info' | 'history'>('info')
+const viewTab = ref<'info' | 'history' | 'payments'>('info')
 const deleteModalOpen = ref(false)
+const paymentProofFiles = ref<Record<string, File | null>>({})
+const uploadingPaymentId = ref<string | null>(null)
 
 function closePenaltyModal() {
   clearAndClosePenalties()
@@ -242,6 +244,37 @@ function formatCurrency(value: number) {
   return `N$ ${value.toLocaleString()}`
 }
 
+function setPaymentProofFile(paymentId: string, file: File | null) {
+  paymentProofFiles.value = {
+    ...paymentProofFiles.value,
+    [paymentId]: file
+  }
+}
+
+async function uploadPaymentProof(paymentId: string) {
+  const file = paymentProofFiles.value[paymentId]
+  if (!file) {
+    addToast({ message: 'Select a payment proof file', variant: 'error' })
+    return
+  }
+  uploadingPaymentId.value = paymentId
+  try {
+    const form = new FormData()
+    form.append('proof', file)
+    await $fetch(`/api/payments/${paymentId}/document`, {
+      method: 'POST',
+      body: form
+    })
+    await refresh()
+    setPaymentProofFile(paymentId, null)
+    addToast({ message: 'Payment proof uploaded', variant: 'success' })
+  } catch (e: any) {
+    addToast({ message: e?.data?.message ?? 'Failed to upload payment proof', variant: 'error' })
+  } finally {
+    uploadingPaymentId.value = null
+  }
+}
+
 async function saveRemainingAmount() {
   if (!loan.value) return
   if (loan.value.status !== 'ACTIVE') {
@@ -370,6 +403,13 @@ function clearAndClosePenalties() {
         @click="viewTab = 'history'"
       >
         Loan History
+      </button>
+      <button
+        class="btn btn-outline"
+        :class="viewTab === 'payments' ? 'border-cyan-500 text-cyan-500' : 'border-gray-300 text-gray-500'"
+        @click="viewTab = 'payments'"
+      >
+        Payments
       </button>
     </div>
 
@@ -740,6 +780,70 @@ function clearAndClosePenalties() {
           <Trash2 v-else class="w-4" />
           {{ deletingLoan ? 'Deleting...' : 'Delete Loan' }}
         </button>
+      </div>
+    </div>
+
+    <div v-else-if="loan && viewTab === 'payments'" class="space-y-4">
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold">Payment Records</h3>
+          <p class="text-xs text-gray-400">Recorded from remaining amount updates</p>
+        </div>
+        <div v-if="loan.payments?.length" class="space-y-3">
+          <div
+            v-for="payment in loan.payments"
+            :key="payment.id"
+            class="border rounded-lg px-3 py-3 text-sm bg-white/70"
+          >
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div>
+                <p class="font-semibold">{{ formatCurrency(Number(payment.amount)) }}</p>
+                <p class="text-xs text-gray-500">Paid: {{ formatDate(payment.paidAt) }}</p>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <p class="text-xs text-gray-400">Proof of payment</p>
+              <div v-if="payment.documents?.length" class="mt-2 space-y-2">
+                <div
+                  v-for="doc in payment.documents"
+                  :key="doc.id"
+                  class="flex items-center justify-between text-xs"
+                >
+                  <span class="truncate" :title="doc.fileUrl">
+                    {{ doc.type }}
+                  </span>
+                  <a
+                    :href="`/api/documents/${doc.id}/download`"
+                    class="text-cyan-400 hover:underline"
+                    :download="getDownloadName(doc.fileUrl, `payment-proof-${doc.id}`)"
+                  >
+                    Download
+                  </a>
+                </div>
+              </div>
+              <p v-else class="text-xs text-gray-500 mt-2">No proof uploaded yet.</p>
+
+              <div class="mt-3 flex flex-col md:flex-row md:items-center gap-2">
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  class="text-xs"
+                  @change="e => setPaymentProofFile(payment.id, (e.target as HTMLInputElement).files?.[0] ?? null)"
+                />
+                <button
+                  class="btn btn-outline text-xs"
+                  :disabled="uploadingPaymentId === payment.id"
+                  @click="uploadPaymentProof(payment.id)"
+                >
+                  <Loader2 v-if="uploadingPaymentId === payment.id" class="w-3 h-3 animate-spin" />
+                  {{ uploadingPaymentId === payment.id ? 'Uploading...' : 'Upload proof' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="card-muted p-3 text-sm text-gray-500">No payments recorded yet.</p>
       </div>
     </div>
 

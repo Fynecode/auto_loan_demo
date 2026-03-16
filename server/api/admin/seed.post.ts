@@ -2,7 +2,9 @@ import bcrypt from 'bcrypt'
 import { defineEventHandler, createError } from 'h3'
 import { prisma } from '~~/server/utils/prisma'
 import { requireRole } from '~~/server/utils/requireRole'
-import { UserRole } from '@prisma/client'
+import pkg from '@prisma/client'
+
+const { UserRole } = pkg
 
 export default defineEventHandler(async (event) => {
   const existingUsers = await prisma.user.count()

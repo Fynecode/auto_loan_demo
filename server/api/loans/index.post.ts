@@ -7,9 +7,11 @@ import { buildContractPayload, calculateLoanFinancials, DEFAULT_DEDUCTION_FEE } 
 import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer } from '~~/server/utils/contractTemplate'
 import { renderContractDocx, convertDocxToPdf } from '~~/server/utils/contractRenderer'
 import { sendLoanContractEmail } from '~~/server/utils/resend'
-import { DocumentType } from '@prisma/client'
+import pkg from '@prisma/client'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
-import { validateUpload, allowedPdfDocx, allowedIdCopy } from '~~/server/utils/uploadValidation'
+
+const { DocumentType } = pkg
+import { validateUpload, allowedPdfDocx, allowedIdCopy, allowedPaymentProof } from '~~/server/utils/uploadValidation'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -228,6 +230,8 @@ async function uploadToCloudinary(
 ): Promise<{ type: DocumentType; url: string; publicId: string; resourceType: string; format?: string }> {
   if (type === DocumentType.ID) {
     validateUpload(file, allowedIdCopy)
+  } else if (type === DocumentType.PAYMENT_PROOF) {
+    validateUpload(file, allowedPaymentProof)
   } else {
     validateUpload(file, allowedPdfDocx)
   }

@@ -1,5 +1,7 @@
-import { UserRole } from '@prisma/client'
+import pkg from '@prisma/client'
 import type { H3Event } from 'h3'
+
+const { UserRole } = pkg
 
 export function requireRole(
   event: H3Event,

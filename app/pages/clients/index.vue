@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sideNav from '~/components/sideNav.vue'
+import { PencilLine, X, Loader2 } from 'lucide-vue-next'
+import { hasEmptyFields, isValidEmail, isValidNamibianID, isValidNamibianPhone } from '~/utils/loanValidation'
+import { useToast } from '~/composables/useToast'
 
 const sidebarCollapsed = ref(true)
+const { addToast } = useToast()
 const sort = ref<'newest' | 'oldest'>('newest')
 const search = ref('')
 const page = ref(1)
 const pageSize = 15
+const editingClient = ref<any | null>(null)
+const savingClient = ref(false)
+const editError = ref<string | null>(null)
+const editForm = ref({
+  fullName: '',
+  email: '',
+  phone: '',
+  empNumber: '',
+  idNumber: ''
+})
 
 watch([sort, search], () => {
   page.value = 1
@@ -19,7 +33,7 @@ const query = computed(() => ({
   pageSize
 }))
 
-const { data: clients, pending, error } = await useFetch('/api/clients', {
+const { data: clients, pending, error, refresh } = await useFetch('/api/clients', {
   query
 })
 
@@ -36,6 +50,83 @@ function nextPage() {
   if (!clients.value) return
   page.value = Math.min(clients.value.totalPages, page.value + 1)
 }
+
+function openEditClient(client: any) {
+  editingClient.value = client
+  editError.value = null
+  editForm.value = {
+    fullName: client.fullName ?? '',
+    email: client.email ?? '',
+    phone: client.phone && client.phone !== '-' ? client.phone : '',
+    empNumber: client.empNumber ?? '',
+    idNumber: client.idNumber ?? ''
+  }
+}
+
+function closeEditClient() {
+  editingClient.value = null
+  editError.value = null
+}
+
+async function saveClient() {
+  if (!editingClient.value) return
+  const payload = {
+    fullName: editForm.value.fullName.trim(),
+    email: editForm.value.email.trim(),
+    phone: editForm.value.phone.trim(),
+    empNumber: editForm.value.empNumber.trim(),
+    idNumber: editForm.value.idNumber.trim()
+  }
+
+  if (hasEmptyFields(payload)) {
+    editError.value = 'Please fill all fields'
+    return
+  }
+
+  if (!isValidEmail(payload.email)) {
+    editError.value = 'Invalid email address'
+    return
+  }
+
+  if (!isValidNamibianID(payload.idNumber)) {
+    editError.value = 'Invalid Namibian ID number'
+    return
+  }
+
+  if (!isValidNamibianPhone(payload.phone)) {
+    editError.value = 'Invalid Namibian phone number'
+    return
+  }
+
+  savingClient.value = true
+  editError.value = null
+  try {
+    await $fetch(`/api/clients/${editingClient.value.id}`, {
+      method: 'PATCH',
+      body: payload
+    })
+    await refresh()
+    addToast({ message: 'Client updated', variant: 'success' })
+    editingClient.value = null
+  } catch (err: any) {
+    editError.value = err?.data?.message ?? 'Failed to update client'
+  } finally {
+    savingClient.value = false
+  }
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  if (editingClient.value) closeEditClient()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -74,6 +165,7 @@ function nextPage() {
       <span>Full Name</span>
       <span>Email</span>
       <span>Phone</span>
+      <span class="md:col-span-2 text-right">Actions</span>
     </div>
 
     <!-- Client table rows -->
@@ -94,6 +186,12 @@ function nextPage() {
       <div>
         <p class="text-xs text-gray-400 md:hidden">Phone</p>
         <span>{{ client.phone }}</span>
+      </div>
+      <div class="flex items-center gap-2 md:justify-end md:col-span-2">
+        <button class="btn btn-ghost text-xs inline-flex items-center gap-1" @click="openEditClient(client)">
+          <PencilLine class="w-4 h-4" />
+          Edit
+        </button>
       </div>
     </div>
 
@@ -123,4 +221,43 @@ function nextPage() {
       </div>
     </div>
   </section>
+
+  <div v-if="editingClient" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="modal-card w-full max-w-md p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Edit Client</h3>
+        <button class="text-gray-500 hover:text-gray-700" @click="closeEditClient">
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+      <p v-if="editError" class="text-red-400 text-sm">{{ editError }}</p>
+      <div>
+        <label class="text-xs text-gray-500">Full Name</label>
+        <input v-model="editForm.fullName" class="input mt-1" :class="editError ? 'border-red-300' : ''" placeholder="Full name" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">Email</label>
+        <input v-model="editForm.email" class="input mt-1" :class="editError ? 'border-red-300' : ''" placeholder="Email" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">Phone</label>
+        <input v-model="editForm.phone" class="input mt-1" :class="editError ? 'border-red-300' : ''" placeholder="Phone" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">Employment No.</label>
+        <input v-model="editForm.empNumber" class="input mt-1" :class="editError ? 'border-red-300' : ''" placeholder="Employment number" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500">ID Number</label>
+        <input v-model="editForm.idNumber" class="input mt-1" :class="editError ? 'border-red-300' : ''" placeholder="ID number" />
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button class="btn btn-outline text-xs" @click="closeEditClient">Cancel</button>
+        <button class="btn btn-primary text-xs" :disabled="savingClient" @click="saveClient">
+          <Loader2 v-if="savingClient" class="w-4 h-4 animate-spin" />
+          {{ savingClient ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

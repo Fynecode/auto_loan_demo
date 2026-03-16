@@ -35,6 +35,12 @@ export const allowedIdCopy: AllowedSpec = {
   extensions: ['pdf', 'jpg', 'jpeg', 'png']
 }
 
+export const allowedPaymentProof: AllowedSpec = {
+  label: 'Payment proof (PDF/JPG/PNG)',
+  mime: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'],
+  extensions: ['pdf', 'jpg', 'jpeg', 'png']
+}
+
 export const allowedDocxOnly: AllowedSpec = {
   label: 'DOCX',
   mime: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],

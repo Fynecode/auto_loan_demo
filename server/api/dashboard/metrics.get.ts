@@ -1,7 +1,9 @@
 import { defineEventHandler, getQuery } from 'h3'
 import { prisma } from '~~/server/utils/prisma'
 import { requireRole } from '~~/server/utils/requireRole'
-import { LoanPenaltyType, LoanStatus } from '@prisma/client'
+import pkg from '@prisma/client'
+
+const { LoanPenaltyType, LoanStatus } = pkg
 
 type MonthBucket = {
   key: string

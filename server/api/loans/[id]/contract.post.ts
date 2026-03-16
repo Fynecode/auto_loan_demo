@@ -1,8 +1,10 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import cloudinary from '~~/server/utils/cloudinary'
-import { DocumentType } from '@prisma/client'
+import pkg from '@prisma/client'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
+
+const { DocumentType } = pkg
 import { validateUpload, allowedPdfOnly } from '~~/server/utils/uploadValidation'
 
 export default defineEventHandler(async (event) => {

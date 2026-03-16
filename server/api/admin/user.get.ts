@@ -1,5 +1,7 @@
 import { requireRole } from '~~/server/utils/requireRole'
-import { UserRole } from '@prisma/client'
+import pkg from '@prisma/client'
+
+const { UserRole } = pkg
 
 export default defineEventHandler((event) => {
   requireRole(event, [UserRole.ADMIN])

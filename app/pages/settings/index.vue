@@ -69,6 +69,13 @@ const { data: users, pending: usersPending, error: usersError, refresh: refreshU
   server: false
 })
 
+const visibleUsers = computed(() => {
+  const currentId = me.value?.id
+  const list = users.value ?? []
+  if (!currentId) return list
+  return list.filter((user: any) => user.id !== currentId)
+})
+
 watch(me, (value) => {
   if (!value) return
   selfForm.value = {
@@ -301,11 +308,11 @@ async function uploadTemplate() {
           <div v-if="usersError" class="text-xs text-red-400">
             Failed to load users.
           </div>
-          <div v-else-if="!users?.length" class="card-muted p-3 text-xs text-gray-500">
+          <div v-else-if="!visibleUsers.length" class="card-muted p-3 text-xs text-gray-500">
             No users found.
           </div>
           <div
-            v-for="user in users"
+            v-for="user in visibleUsers"
             :key="user.id"
             class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border border-[color:var(--border)] rounded-lg px-3 py-2 bg-white/70"
           >

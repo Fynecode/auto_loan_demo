@@ -28,6 +28,7 @@ enum DocumentType {
   BANK_STATEMENT
   CONTRACT
   PAYSLIP
+  PAYMENT_PROOF
   OTHER
 }
 
@@ -134,10 +135,14 @@ model Document {
   format    String?
   clientId  String?
   loanId    String?
+  paymentId String?
   loan      Loan?   @relation(fields: [loanId], references: [id])
   client    Client?  @relation(fields: [clientId], references: [id])
+  payment   Payment? @relation(fields: [paymentId], references: [id])
 
   uploadedAt DateTime @default(now())
+
+  @@index([paymentId])
 }
 
 model Payment {
@@ -147,6 +152,7 @@ model Payment {
   paidAt      DateTime @default(now())
 
   loan        Loan     @relation(fields: [loanId], references: [id])
+  documents   Document[]
 }
 
 // AUDIT & STATE TRACKING

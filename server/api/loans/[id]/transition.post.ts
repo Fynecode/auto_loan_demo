@@ -1,7 +1,9 @@
 import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
-import { LoanStatus } from '@prisma/client'
+import pkg from '@prisma/client'
 import { createError, defineEventHandler, readBody } from 'h3'
+
+const { LoanStatus } = pkg
 
 const allowedTransitions: Record<LoanStatus, LoanStatus[]> = {
   DRAFT: ['PENDING_APPROVAL', 'CANCELLED'],

@@ -1,6 +1,8 @@
-import { PrismaClient, UserRole } from '@prisma/client'
+import pkg from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcrypt'
+
+const { PrismaClient, UserRole } = pkg
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL
