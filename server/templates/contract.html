@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .page {
+      width: 100%;
+      padding: 4rem;
+      box-sizing: border-box;
+      min-height: 297mm;
+    }
+
+    .page-break {
+      page-break-after: always;
+    }
+
+    .signature-page {
+      page-break-before: always;
+    }
+
+    .title-bleed {
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+      margin-top: -1px;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+
+    .header {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .page1-content {
+      border-top: 0px solid black;
+      padding: 1.5rem;
+    }
+
+    .page1-border {
+      border: 1px solid red;
+      padding: 0;
+    }
+
+    .logo {
+      width: 120px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .logo-img:not([src]),
+    .logo-img[src=""] {
+      display: none;
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .company {
+      text-align: left;
+      font-size: 10px;
+    }
+
+    h2 {
+      text-align: center;
+      margin: 10px 0 15px;
+      font-size: 14px;
+    }
+
+    .title-banner {
+      background: rgba(220, 38, 38, 0.4);
+      border: 1px solid #dc2626;
+      padding: 6px 10px;
+      margin-top: 0;
+    }
+
+    p {
+      margin: 4px 0;
+      text-align: justify;
+    }
+
+    .section {
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+
+    .top-table {
+      table-layout: fixed;
+      border-bottom: 2px solid #16a34a;
+      margin-bottom: 12px;
+    }
+
+    td {
+      padding: 4px;
+      vertical-align: top;
+    }
+
+    .label {
+      font-weight: bold;
+      width: 25%;
+    }
+
+    .declarations p {
+      margin-left: 10px;
+    }
+
+    .signature-section {
+      margin-top: 30px;
+    }
+
+    .signature-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 50px;
+    }
+
+    .signature-block {
+      width: 45%;
+    }
+
+    .line {
+      border-bottom: 1px solid black;
+      margin-top: 40px;
+      margin-bottom: 5px;
+    }
+
+    .line-inline {
+      display: inline-block;
+      min-width: 160px;
+      border-bottom: 1px solid #111;
+      margin: 0 6px 2px;
+      height: 0.9em;
+      vertical-align: bottom;
+    }
+
+    .line-inline.short {
+      min-width: 80px;
+    }
+
+    .terms-banner {
+      background: rgba(220, 38, 38, 0.4);
+      border: 1px solid #dc2626;
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .terms-columns {
+      column-count: 2;
+      column-gap: 24px;
+      column-fill: auto;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .terms-columns p,
+    .terms-columns h4 {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .page-gap {
+      margin-top: 30px;
+    }
+
+    .schedule-banner {
+      background: rgba(22, 163, 74, 0.4);
+      border: 1px solid #16a34a;
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    @media print {
+      .page {
+        page-break-after: always;
+      }
+
+      .page-gap {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- PAGE 1 -->
+  <div class="page page-break">
+
+    <div class="header">
+      <div class="header-right">
+        <div class="logo">
+          <img class="logo-img" src="{{logoUrl}}" alt="Company logo" />
+        </div>
+
+        <div class="company">
+          <strong>GREENLINE FINANCIAL SOLUTIONS CC</strong><br>
+          15th Road, PO Box 2192<br>
+          Tsumeb, Namibia<br>
+          Tel: 081 866 9984
+        </div>
+      </div>
+    </div>
+
+    <div class="page1-border">
+      <div class="title-bleed">
+        <h2 class="title-banner">LOAN AGREEMENT</h2>
+      </div>
+      <div class="page1-content">
+        <table class="top-table">
+          <tr>
+            <td class="label">Client Number</td>
+            <td>{{clientNumber}}</td>
+            <td class="label">Agreement Number</td>
+            <td>{{agreementNumber}}</td>
+          </tr>
+          <tr>
+            <td class="label">Employment Number</td>
+            <td>{{employmentNumber}}</td>
+            <td class="label">ID Number</td>
+            <td>{{idNumber}}</td>
+          </tr>
+        </table>
+
+        <p>Dear <strong>{{clientName}}</strong>,</p>
+
+        <p>
+          We are pleased to inform you that your loan application has been approved.
+          This Loan Agreement includes the Loan Schedule, Standard Terms and Conditions,
+          and Credit Protection Cover.
+        </p>
+
+        <div class="declarations">
+          <p><strong>Declarations:</strong></p>
+          <p>1. I declare that all the information supplied by me in terms of this Loan Agreement is true and correct.</p>
+          <p>2. I declare that I applied for the Loan Amount stipulated in the Loan Schedule and agree to repay the Total Amount Repayable by way of the Total Monthly Installments over the Loan Period.</p>
+          <p>3. I declare that the Standard Terms and Conditions of this Loan Agreement have been explained to me in a language that I understand, and that I have read, understand, and agree to all the information contained in this Loan Agreement.</p>
+          <p>4. I understand that Credit Protection Cover is required as security in terms of this Loan Agreement and declare that I was given the option to cede an existing credit protection cover policy or to take out the GREENLINE FINANCIAL SOLUTIONS CC Credit Protection Cover Policy.</p>
+          <p>5. I hereby authorise my employer to deduct from my salary all repayments in terms of this Loan Agreement and agree that no deduction may be withheld or postponed for whatever reason, and that my employer, or its service provider, may charge me a fee for this salary deduction.</p>
+          <p>6. I agree that repayments in terms of this Loan Agreement may be effected against my bank account if for whatever reason I am not able to do so by way of a salary deduction.</p>
+          <p>7. I confirm that I received copies of The Standard Terms and Conditions pertaining to this Loan Agreement and, if taken out, the Policy and Terms and Conditions pertaining to the GREENLINE FINANCIAL SOLUTIONS CC Credit Protection Cover Policy.</p>
+        </div>
+
+        <div class="section">
+          <p><strong>Loan Consultant:</strong></p>
+          <p>
+            Signed at: <span class="line-inline"></span>
+            on this <span class="line-inline short"></span>
+            day of <span class="line-inline short"></span>
+            20 <span class="line-inline short"></span>
+          </p>
+        </div>
+
+        <div class="section">
+          <p><strong>Client:</strong></p>
+          <p>
+            Signed at: <span class="line-inline"></span>
+            on this <span class="line-inline short"></span>
+            day of <span class="line-inline short"></span>
+            20 <span class="line-inline short"></span>
+          </p>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-row">
+            <div class="signature-block">
+              <div class="line"></div>
+              Client Signature
+            </div>
+
+            <div class="signature-block">
+              <div class="line"></div>
+              For Greenline Financial Solutions
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page-gap"></div>
+
+  <div class="page page-break">
+    <div class="schedule-banner">Loan Schedule</div>
+
+    <div class="section">
+      <p><strong>Third Party Settlements (if applicable):</strong></p>
+      <p>Cash Disbursed :</p>
+    </div>
+
+    <table class="top-table">
+      <tr>
+        <td class="label">Loan Amount</td>
+        <td>{{amount}}</td>
+        <td class="label">Loan Period</td>
+        <td>{{period}} Months</td>
+      </tr>
+      <tr>
+        <td class="label">Credit Protection Cover Policy Single Premium (if taken out)</td>
+        <td>N$00.00</td>
+        <td class="label">Fixed Finance Charge Rate</td>
+        <td>{{rate}}%</td>
+      </tr>
+      <tr>
+        <td class="label">Namfisa Levy (1.03%)</td>
+        <td>{{levy}}</td>
+        <td class="label">Bank of Borrower</td>
+        <td>{{bank}}</td>
+      </tr>
+      <tr>
+        <td class="label">Stamp Duty</td>
+        <td>N$5.00</td>
+        <td class="label">Account Number</td>
+        <td>{{accountNo}}</td>
+      </tr>
+      <tr>
+        <td class="label">Principal Debt</td>
+        <td>{{amount}}</td>
+        <td class="label">Branch Code</td>
+        <td>{{branchCode}}</td>
+      </tr>
+      <tr>
+        <td class="label">Finance Charges over the full repayment period</td>
+        <td>{{finCharges}}</td>
+        <td class="label"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="label">Total Amount Repayable</td>
+        <td>{{amountRepay}}</td>
+        <td class="label"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="label">Monthly Loan Installment (Base)</td>
+        <td>{{baseFee}}</td>
+        <td class="label"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="label">Monthly Salary Deduction Fee</td>
+        <td>{{deduction}}</td>
+        <td class="label"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="label">Total Monthly Installments</td>
+        <td>{{totalFee}}</td>
+        <td class="label"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="label">Number of Total Monthly Installments</td>
+        <td>{{period}}</td>
+        <td class="label"></td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- PAGE 3 -->
+  <div class="page-gap"></div>
+
+  <div class="page">
+    
+    <div class="terms-columns">
+      <div class="terms-banner">Standard Terms and Conditions</div>
+      <p><strong>1 Definition</strong></p>
+      <p>1.1 Act - the Microlending Act, 2018 (Act No. 7 of 2018);</p>
+      <p>1.2 "Borrower" - the borrowing party with whom the Lender concludes the Loan Agreement;</p>
+      <p>1.3 "Cash Disbursed" - the cash paid into the Borrower's bank account as a result of this Loan Agreement;</p>
+      <p>1.4 "Credit Protection Cover" - death, lump sum total and permanent disability, temporary disability, critical illness, extended job loss, funeral and AIDS/HIV cover, providing decreasing term insurance for the settlement of the Principal Debt outstanding from time to time;</p>
+      <p>1.5 "Credit Protection Cover Policy" - if taken out, the single premium policy providing Credit Protection Cover and underwritten by GREENLINE FINANCIAL SOLUTIONS CC, and incorporated herein;</p>
+      <p>1.6 "Employer" - the Government of the Republic of Namibia;</p>
+      <p>1.7 "Finance Charges" - the finance charges on the Principal Debt at the Fixed Finance Charge Rate;</p>
+      <p>1.8 "Fixed Finance Charge Rate" - the finance charge rate that applies at the commencement of the Loan Agreement and remains fixed over the Loan Period;</p>
+      <p>1.9 "he" - shall also mean "she";</p>
+      <p>1.10 "Lender" - GREENLINE FINANCIAL SOLUTIONS CC;</p>
+      <p>1.11 "Loan Agreement" - the agreement coming into effect when signed by the Borrower;</p>
+      <p>1.12 "Loan Amount" - the amount stipulated in the Loan Schedule;</p>
+      <p>1.13 "Loan Period" - the total number of months over which the Loan is repayable;</p>
+      <p>1.14 "Maximum Finance Charges" - the maximum finance charges as determined by the Act;</p>
+      <p>1.15 "Monthly Loan Installment" - the monthly installment payable by the Borrower to the Lender;</p>
+      <p>1.16 "Monthly Salary Deduction" - the deduction of the Total Monthly Installment from the Borrower's salary by the Employer, or its service provider, and paying the Monthly Loan Installment over to the Lender and the Monthly Salary Deduction Fee over to the Employer, or its service provider;</p>
+      <p>1.17 "Monthly Salary Deduction Fee" - the monthly fee charged by, and owed to the Employer, or its service provider, for the Monthly Salary Deduction;</p>
+      <p>1.18 "Namfisa" - the Namibia Financial Institutions Supervisory Authority;</p>
+      <p>1.19 "Namfisa Act" - the Namibia Financial Institutions Supervisory Authority Act, 2001 (Act No. 3 of 2001);</p>
+      <p>1.20 "Namfisa Levy" - the fee payable in terms of the Namfisa Act;</p>
+      <p>1.21 "Principal Debt" - the amount indebted by the Borrower to the Lender as stipulated in the Loan Schedule;</p>
+      <p>1.22 "Stamp Duty" - the stamp duty payable in accordance with the Stamp Duties Act 15 of 1993;</p>
+      <p>1.23 "Total Amount Repayable" - the amount stipulated in the Loan Schedule;</p>
+      <p>1.24 "Total Monthly Installment" - the installment reflected in the Loan Schedule, which includes the Monthly Salary Deduction Fee;</p>
+
+      <p><strong>2 The Loan</strong></p>
+      <p>2.1 The Lender hereby lends to the Borrower who borrows from the Lender the Principal Debt, subject to the Standard Terms and Conditions set out in the Loan Agreement.</p>
+      <p>2.2 The Borrower declares that he or she is legally and unconditionally indebted to the Lender for the Total Amount Repayable, and undertakes to repay such in the Total Monthly Installments over the Loan Period.</p>
+
+      <p><strong>3 Charges and Fees</strong></p>
+      <p>3.1 The Principal Debt outstanding from time to time shall attract Finance Charges at the Fixed Finance Charge Rate specified in the Loan Schedule, calculated on the daily balance and capitalised monthly in arrears. This rate is fixed, and the Finance Charges shall at all times remain within the Maximum Finance Charges.</p>
+      <p>3.2 The Lender may charge penalty interest of five percent per month on the arrear installment in the event of default by the Borrower, for a period of not more than three months.</p>
+      <p>3.3 The Borrower acknowledges that the Lender is entitled to recover the following fees and duties from the Borrower as part of the Principal Debt:</p>
+      <p>3.4 Namfisa Levy: 1.03% of the Loan Amount.</p>
+      <p>3.5 Stamp Duty: N$5.00 per Loan Agreement.</p>
+
+      
+      <p><strong>4 Repayments</strong></p>
+      <p>4.1 The Total Amount Repayable shall be repaid as stipulated in the Loan Schedule. The first Total Monthly Installment shall be payable on the first day of the month following the date on which the Loan Agreement was approved and the Loan Amount paid. All further Total Monthly Installments shall be payable on the same day of each and every subsequent month, until the Total Amount Repayable has been settled in full. The Finance Charges and the Total Monthly Loan Installment may be adjusted if the first Total Monthly Loan Installment is received later than the first day of the month following the date on which the Loan Agreement was approved and the Loan Amount paid.</p>
+      <p>4.2 The Borrower hereby irrevocably authorises and instructs the Lender to activate the Monthly Salary Deduction, which shall remain in place until the Total Amount Repayable has been settled in full.</p>
+      <p>4.3 The Borrower hereby agrees to pay to the Employer, or his service provider, the Monthly Salary Deduction Fee of 2.3%, inclusive of Value Added Tax.</p>
+      <p>4.4 If the Borrower fails to pay the Total Monthly Installment on the due date for payment and such failure is due to his Monthly Salary Deduction not being processed timeously, the Lender shall be entitled to recover the amount of the unpaid Total Monthly Installment, plus the Finance Charges thereon, from the Borrower by automatically extending the Loan Period accordingly to enable the Borrower to continue with the Total Monthly Installments until the debt has been settled.</p>
+      <p>4.5 The Borrower hereby authorises and unconditionally consents to the Lender executing a debit order instruction in its favour at the Borrower's current or future bank or financial institution, which shall remain in force until the Total Amount Repayable has been settled in full, which debit order instruction shall be activated by the Lender in the event of default or non-activation of the Monthly Salary Deduction and or breach of any other obligation by the Borrower during the currency of this Loan Agreement.</p>
+      <p>4.6 All repayments shall be appropriated firstly in settlement of the amounts arising from credit control actions such as legal and collection costs, thereafter in settlement of the Total Amount Repayable.</p>
+
+      <p><strong>5 Default and Acceleration</strong></p>
+      <p>5.1 The Borrower acknowledges that if any Total Monthly Installment or other amount due is not paid by the Borrower to the Lender on its due date, the Lender shall be entitled (without prejudice to any other rights the Lender may have) to demand repayment of the full outstanding balance of the Total Amount Repayable, or to reschedule the Total Monthly Installments over a period to be determined by the Lender.</p>
+      <p>5.2 Any latitude, extension of time, or indulgence which may be allowed by the Lender to the Borrower in respect of the Borrower's obligations in terms of the Loan Agreement shall not be deemed to be a waiver of, or in any way affect the Lender's rights to require strict and punctual compliance by the Borrower with each and every term and provision of this Loan Agreement.</p>
+      <p>5.3 The Borrower acknowledges and agrees that the Lender may, with prior written notice to the Borrower, instruct its attorneys or other persons to perform legal or collection services to collect any amount owed by the Borrower to the Lender, and that the Borrower shall be liable for any and all costs and charges incurred by the Lender on an attorney and own client scale of fees, including any collection commission paid or payable by the Lender, tracing charges or any other costs or charges of whatsoever nature.</p>
+      <p>5.4 The Lender acknowledges that at least 28 days before the Lender forwards any adverse information on the Borrower to a credit bureau, which information will be capable of being accessed by subscribers to the credit bureau, the Borrower will be informed by way of a notice addressed to the chosen address of the Borrower of the intention of the Lender to do so.</p>
+      <p>5.5 The Borrower may make additional payments or settle the outstanding amount early in one or more payments without any penalties being levied for early settlement and the Lender may, in the event of early settlement, only stipulate for, demand or receive from the Borrower pro rata finance charges at the Fixed Finance Charge Rate.</p>
+
+      <p><strong>6 Certificate, Jurisdiction and Legal Costs</strong></p>
+      <p>6.1 A certificate signed by any competent officer of the Lender shall be prima facia evidence of the Fixed Finance Charge Rate applied and the Principal Debt outstanding in terms of the Loan Agreement for purposes of judgment, including provisional sentence or summary judgment and evidence of claims against insolvent and deceased estates or otherwise. Proof of the appointment or competency of the signatory shall not be required.</p>
+      <p>6.2 The Lender and Borrower agree that the Loan Agreement shall be governed in all respects by the laws of the Republic of Namibia and the Borrower consents to the jurisdiction of the Magistrates' Court in respect of any action instituted against the Borrower by reason hereof, irrespective of the amount of such action or the value of any security involved. Notwithstanding the foregoing the Lender shall nevertheless have the right to institute proceedings in any other court, in which case costs shall be calculated at the scale of fees of such other court.</p>
+
+      <p><strong>7 Cooling Off Period</strong></p>
+      <p>7.1 The Borrower may terminate the Loan Agreement within a period of three days after the signing of the Loan Agreement and if the Loan Amount has been advanced to the Borrower, the Borrower must simultaneously repay the Loan Amount so advanced to the Lender.</p>
+
+      <p><strong>8 Amendments</strong></p>
+      <p>8.1 The Loan Agreement is the sole agreement between the Lender and the Borrower and no relaxation or indulgence granted by the Lender to the Borrower shall in any respect prejudice the Lender's rights hereunder.</p>
+      <p>8.2 No addition to and variation of the Loan Agreement shall be binding unless the change reduces the Borrower's liabilities under the Loan Agreement or the change is recorded in writing and signed by both the Lender and the Borrower, or unless such amendment is effected in accordance with the Act.</p>
+      <p>8.3 No latitude, concession or condonation given by the Lender to the Borrower, shall detract from any of the Lender's rights under the Loan Agreement.</p>
+
+      <p><strong>9 Security, Insurance and Indemnity</strong></p>
+      <p>9.1 The Lender deems it reasonable and requires that the Borrower takes out Credit Protection Cover as security in terms of the Loan Agreement. The Borrower may take out the Credit Protection Cover Policy or cede an existing policy with similar credit protection cover to the Lender, and nominates the Lender as beneficiary under the policy. The Borrower agrees that, if taken out, the Credit Protection Cover Policy single premium shall be included in the Principal Debt.</p>
+      <p>9.2 The Borrower authorises his Employer to supply information to the Lender upon the termination of his employment, or to supply personal information to the Lender when so requested.</p>
+
+      <p><strong>10 Waiver</strong></p>
+      <p>10.1 The Borrower hereby waives the benefits of the legal exceptions of non-payment of a loan or plea of default of a payment, no cause of action, miscalculation, simultaneous citation and division of debt, review of accounts and no value received and hereby declares himself to be fully acquainted with the meaning thereof and of his waiver.</p>
+
+      <p><strong>11 Confidentiality, Consent and Complaints Procedure</strong></p>
+      <p>11.1 The Lender acknowledges that the Lender may not, without the express written consent of the Borrower and apart from disclosing relevant information to a registered credit bureau, disclose any confidential information obtained in the course of this Loan Agreement other than if it is required by a court order from a court with competent jurisdiction.</p>
+      <p>11.2 The Borrower consents that the Lender may send statements and messages related to this Loan to the email address or cellular phone provided by the Borrower herein, and that the Lender, its affiliates, associates and subsidiaries may send advertising and promotional material to the email address or cellular phone number provided by the Borrower herein.</p>
+      <p>11.3 The Lender acknowledges that the Lender may not, without the express written consent of the Borrower, obtain from or disclose to a third party, other than a registered credit bureau, the Borrower's credit record and payment history.</p>
+      <p>11.4 The Lender and the Borrower acknowledge that any consent to judgment forms or emoluments attached orders obtained prior to the Borrower defaulting, is considered void and not enforceable.</p>
+      <p>11.5 The Lender and the Borrower acknowledge that complaints which cannot be resolved between the Lender and the Borrower shall be referred to the Financial Services Adjudicator or Namfisa.</p>
+    </div>
+  </div>
+
+  <!-- PAGE 5 -->
+  <!-- <div class="page-gap"></div> -->
+
+  <div class="page signature-page">
+    <div class="section">
+      <p><strong>Signed on behalf of GREENLINE FINANCIAL SOLUTIONS CC</strong></p>
+      <div class="line"></div>
+    </div>
+  </div>
+
+</body>
+</html>

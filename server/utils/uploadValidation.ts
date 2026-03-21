@@ -47,6 +47,25 @@ export const allowedDocxOnly: AllowedSpec = {
   extensions: ['docx']
 }
 
+export const allowedHtmlOnly: AllowedSpec = {
+  label: 'HTML',
+  mime: ['text/html'],
+  extensions: ['html']
+}
+
+export const allowedLogo: AllowedSpec = {
+  label: 'SVG/PNG/JPEG/ICO',
+  mime: [
+    'image/svg+xml',
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/x-icon',
+    'image/vnd.microsoft.icon'
+  ],
+  extensions: ['svg', 'png', 'jpg', 'jpeg', 'ico']
+}
+
 export function validateUpload(file: UploadFile, allowed: AllowedSpec, maxBytes = MAX_BYTES) {
   if (!file?.data) {
     throw createError({ statusCode: 400, message: 'Missing file data' })

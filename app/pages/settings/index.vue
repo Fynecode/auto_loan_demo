@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sideNav from '~/components/sideNav.vue'
-import { Loader2, PencilLine, Trash2, Upload, UserPlus, X } from 'lucide-vue-next'
+import { Loader2, PencilLine, Trash2, UserPlus, X } from 'lucide-vue-next'
 import { useToast } from '~/composables/useToast'
 
 const sidebarCollapsed = ref(true)
@@ -55,15 +55,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
 })
 
-const {
-  data: templateData,
-  error: templateError,
-  refresh: refreshTemplate
-} = await useFetch('/api/settings/contract-template', {
-  immediate: true,
-  server: false
-})
-
 const { data: users, pending: usersPending, error: usersError, refresh: refreshUsers } = await useFetch('/api/settings/users', {
   immediate: false,
   server: false
@@ -91,19 +82,93 @@ watch(isAdmin, (value) => {
   if (value) {
     refreshUsers()
   }
-  refreshTemplate()
 }, { immediate: true })
 
-const templateFile = ref<File | null>(null)
-const uploadingTemplate = ref(false)
-const templatePreviewUrl = computed(() => {
-  if (!templateData.value?.fileUrl) return ''
-  return '/api/settings/contract-template/preview'
-})
+const templatePreviewUrl = computed(() => '/api/settings/contract-template/preview')
 const previewLoaded = ref(false)
+const previewHtml = ref('')
+const previewError = ref('')
+const logoUrl = ref('')
+const logoUploading = ref(false)
+const logoFile = ref<File | null>(null)
+const logoInputRef = ref<HTMLInputElement | null>(null)
+
+async function loadTemplatePreview() {
+  previewLoaded.value = false
+  previewError.value = ''
+  try {
+    previewHtml.value = await $fetch(templatePreviewUrl.value, { responseType: 'text' })
+  } catch (err: any) {
+    previewError.value = err?.data?.message || 'Failed to load preview.'
+    previewHtml.value = ''
+  } finally {
+    previewLoaded.value = true
+  }
+}
+
+async function loadLogo() {
+  try {
+    const res = await $fetch<{ logoUrl: string }>('/api/settings/logo')
+    logoUrl.value = res?.logoUrl || ''
+  } catch {
+    logoUrl.value = ''
+  }
+}
+
+function onLogoSelected(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  if (!target?.files?.length) {
+    logoFile.value = null
+    return
+  }
+  logoFile.value = target.files[0]
+}
+
+function triggerLogoPicker() {
+  logoInputRef.value?.click()
+}
+
+async function uploadLogo() {
+  if (!logoFile.value) return
+  try {
+    logoUploading.value = true
+    const formData = new FormData()
+    formData.append('logo', logoFile.value)
+    const res = await $fetch<{ logoUrl: string }>('/api/settings/logo', {
+      method: 'POST',
+      body: formData
+    })
+    logoUrl.value = res?.logoUrl || ''
+    logoFile.value = null
+    addToast({ message: 'Logo uploaded', variant: 'success' })
+    await loadTemplatePreview()
+  } catch (err: any) {
+    addToast({ message: err?.data?.message || 'Failed to upload logo', variant: 'error' })
+  } finally {
+    logoUploading.value = false
+  }
+}
+
+async function deleteLogo() {
+  try {
+    await $fetch('/api/settings/logo', { method: 'DELETE' })
+    logoUrl.value = ''
+    addToast({ message: 'Logo removed', variant: 'success' })
+    await loadTemplatePreview()
+  } catch (err: any) {
+    addToast({ message: err?.data?.message || 'Failed to remove logo', variant: 'error' })
+  }
+}
 
 watch(templatePreviewUrl, () => {
   previewLoaded.value = false
+})
+
+watch(selectedSection, (value) => {
+  if (value === 'template') {
+    loadTemplatePreview()
+    loadLogo()
+  }
 })
 
 onMounted(async () => {
@@ -189,29 +254,6 @@ async function deleteUser() {
   }
 }
 
-async function uploadTemplate() {
-  if (!templateFile.value) {
-    addToast({ message: 'Select a DOCX file first', variant: 'error' })
-    return
-  }
-
-  uploadingTemplate.value = true
-  try {
-    const form = new FormData()
-    form.append('template', templateFile.value)
-    const result = await $fetch('/api/settings/contract-template', {
-      method: 'POST',
-      body: form
-    })
-    await refreshTemplate()
-    templateFile.value = null
-    addToast({ message: 'Contract template updated', variant: 'success' })
-  } catch (err: any) {
-    addToast({ message: err?.data?.message || 'Failed to upload template', variant: 'error' })
-  } finally {
-    uploadingTemplate.value = false
-  }
-}
 </script>
 
 <template>
@@ -247,7 +289,7 @@ async function uploadTemplate() {
         @click="selectedSection = 'template'"
       >
         <p class="text-xs text-gray-400">Templates</p>
-        <p class="text-sm font-semibold">Upload contract template</p>
+        <p class="text-sm font-semibold">Contract branding</p>
       </button>
     </div>
 
@@ -338,47 +380,57 @@ async function uploadTemplate() {
 
     <div v-if="selectedSection === 'template'" class="mt-6">
       <div class="card p-4 w-full">
-        <h2 class="text-sm font-semibold mb-3">Contract Template</h2>
-        <p class="text-xs text-gray-500 mb-3">Upload a DOCX template to use for contract generation.</p>
-        <div class="flex flex-col gap-2">
-          <label class="text-xs text-gray-500">Upload DOCX template</label>
+        <h2 class="text-sm font-semibold mb-3">Contract Branding</h2>
+        <p class="text-xs text-gray-500 mb-4">
+          Upload a logo to appear on generated contracts. Allowed: SVG, PNG, JPG, ICO.
+        </p>
+
+        <div class="flex flex-col md:flex-row md:items-center gap-3 mb-4">
           <input
             type="file"
-            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            @change="(e: any) => (templateFile = e.target.files?.[0] ?? null)"
-            class="input text-xs"
-            :disabled="!isAdmin"
+            accept=".svg,.png,.jpg,.jpeg,.ico"
+            class="text-xs hidden"
+            ref="logoInputRef"
+            @change="onLogoSelected"
           />
+          <button
+            class="btn btn-outline text-xs"
+            @click="triggerLogoPicker"
+          >
+            Choose file
+          </button>
+          <button
+            class="btn btn-primary text-xs"
+            :disabled="logoUploading || !logoFile"
+            @click="uploadLogo"
+          >
+            <Loader2 v-if="logoUploading" class="w-4 h-4 animate-spin mr-2" />
+            {{ logoUrl ? 'Update logo' : 'Upload logo' }}
+          </button>
+          <span v-if="logoFile" class="text-xs text-gray-500">{{ logoFile.name }}</span>
         </div>
-        <div class="mt-2 text-xs text-gray-500">
-          <div v-if="templateFile">
-            <span class="block truncate" :title="templateFile.name">
-              Selected: {{ templateFile.name }} ({{ Math.round(templateFile.size / 1024) }} KB)
-            </span>
-          </div>
-          <div v-else-if="templateData?.fileUrl" class="flex flex-col gap-1">
-            <span>
-              Uploaded:
-              {{ templateData.createdAt ? new Date(templateData.createdAt).toLocaleString() : 'Unknown' }}
-            </span>
-          </div>
-          <div v-else-if="templateError" class="text-red-400">
-            Failed to load template.
-          </div>
-          <div v-else class="card-muted p-3 text-xs text-gray-500">
-            No active template uploaded yet.
+
+        <div v-if="logoUrl" class="mb-6">
+          <p class="text-xs text-gray-500 mb-2">Current logo</p>
+          <div class="flex flex-col md:flex-row md:items-center gap-3">
+            <div class="w-40 h-20 border border-[color:var(--border)] rounded-lg bg-white flex items-center justify-center overflow-hidden">
+            <img :src="logoUrl" alt="Contract logo" class="max-h-full max-w-full object-contain" />
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="btn btn-outline text-xs" @click="triggerLogoPicker">
+                Update
+              </button>
+              <button class="btn text-xs text-red-500 hover:text-red-600" @click="deleteLogo">
+                Delete
+              </button>
+            </div>
           </div>
         </div>
-        <button
-          v-if="isAdmin"
-          class="mt-3 btn btn-primary text-xs"
-          :disabled="uploadingTemplate"
-          @click="uploadTemplate"
-        >
-          <Loader2 v-if="uploadingTemplate" class="w-4 h-4 animate-spin" />
-          <Upload v-else class="w-4 h-4" />
-          {{ uploadingTemplate ? 'Uploading...' : 'Upload Template' }}
-        </button>
+
+        <h3 class="text-sm font-semibold mb-3">Contract Preview</h3>
+        <p class="text-xs text-gray-500 mb-3">
+          The system now uses a single local HTML template. Preview below.
+        </p>
 
         <div v-if="templatePreviewUrl" class="mt-4 border border-[color:var(--border)] rounded-2xl overflow-hidden relative">
           <div
@@ -388,11 +440,17 @@ async function uploadTemplate() {
             <Loader2 class="w-4 h-4 animate-spin mr-2" />
             Loading preview...
           </div>
+          <div
+            v-else-if="previewError"
+            class="absolute inset-0 flex items-center justify-center bg-white/80 text-xs text-red-500 px-4 text-center"
+          >
+            {{ previewError }}
+          </div>
           <iframe
-            :src="templatePreviewUrl"
+            :srcdoc="previewHtml"
             class="w-full h-[70vh]"
             title="Contract template preview"
-            @load="previewLoaded = true"
+            sandbox=""
           />
         </div>
       </div>

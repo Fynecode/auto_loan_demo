@@ -1,5 +1,7 @@
 import { createError } from 'h3'
 import { prisma } from './prisma'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 export async function getActiveContractTemplateOrThrow() {
   const template = await prisma.contractTemplate.findFirst({
@@ -32,6 +34,22 @@ export async function downloadContractTemplateBuffer(template: { fileUrl: string
       message: `Failed to download contract template (${res.status})`
     })
   }
-  const arrayBuffer = await res.arrayBuffer()
-  return Buffer.from(arrayBuffer)
+  const text = await res.text()
+  if (!isHtmlTemplate(text)) {
+    throw createError({
+      statusCode: 415,
+      message: 'Active contract template is not HTML. Please upload an HTML template.'
+    })
+  }
+  return text
+}
+
+export async function loadLocalContractTemplateHtml() {
+  const templatePath = join(process.cwd(), 'server', 'templates', 'contract.html')
+  return await readFile(templatePath, 'utf-8')
+}
+
+function isHtmlTemplate(value: string) {
+  const trimmed = value.trim().toLowerCase()
+  return trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')
 }

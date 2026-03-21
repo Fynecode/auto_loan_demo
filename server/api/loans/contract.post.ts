@@ -8,8 +8,9 @@ import {
 import { buildContractPayload } from '~~/server/utils/contractPayloadBuilder'
 import { prisma } from '~~/server/utils/prisma'
 import { generateLoanReference } from '~~/server/utils/generateLoanReference'
-import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer } from '~~/server/utils/contractTemplate'
-import { renderContractDocx, convertDocxToPdf } from '~~/server/utils/contractRenderer'
+import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer, loadLocalContractTemplateHtml } from '~~/server/utils/contractTemplate'
+import { renderContractHtml, convertHtmlToPdf } from '~~/server/utils/contractRenderer'
+import { getContractLogoUrl } from '~~/server/utils/settings'
 
 export default defineEventHandler(async (event) => {
   const form = await readMultipartFormData(event)
@@ -45,12 +46,20 @@ export default defineEventHandler(async (event) => {
   const agrNo = await generateLoanReference()
 
   const contractData = await buildContractPayload(client, loan, { clientNo, agrNo })
+  const logoUrl = await getContractLogoUrl()
 
   try {
-    const template = await getActiveContractTemplateOrThrow()
-    const templateBuffer = await downloadContractTemplateBuffer(template)
-    const docxBuffer = renderContractDocx(templateBuffer, contractData)
-    const pdfBuffer = await convertDocxToPdf(docxBuffer)
+    const template = await getActiveContractTemplateOrThrow().catch(() => null)
+    let templateHtml = await loadLocalContractTemplateHtml()
+    if (template) {
+      try {
+        templateHtml = await downloadContractTemplateBuffer(template)
+      } catch (error) {
+        console.warn('Contract template fallback to local HTML:', (error as Error).message)
+      }
+    }
+    const html = renderContractHtml(templateHtml, { ...contractData, logoUrl })
+    const pdfBuffer = await convertHtmlToPdf(html)
 
     setHeader(event, 'Content-Type', 'application/pdf')
     setHeader(event, 'Content-Disposition', 'inline; filename=contract.pdf')

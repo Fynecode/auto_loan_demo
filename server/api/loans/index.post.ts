@@ -4,8 +4,8 @@ import { requireAuth } from '~~/server/utils/requireAuth'
 import cloudinary from '~~/server/utils/cloudinary'
 import { detectDuplicateLoan } from '~~/server/utils/detectDuplicateLoan'
 import { buildContractPayload, calculateLoanFinancials, DEFAULT_DEDUCTION_FEE } from '~~/server/utils/contractPayloadBuilder'
-import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer } from '~~/server/utils/contractTemplate'
-import { renderContractDocx, convertDocxToPdf } from '~~/server/utils/contractRenderer'
+import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer, loadLocalContractTemplateHtml } from '~~/server/utils/contractTemplate'
+import { renderContractHtml, convertHtmlToPdf } from '~~/server/utils/contractRenderer'
 import { sendLoanContractEmail } from '~~/server/utils/resend'
 import pkg from '@prisma/client'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
@@ -105,8 +105,15 @@ export default defineEventHandler(async (event) => {
     uploads.map(({ type, file }) => uploadToCloudinary(file, type))
   )
 
-  const template = await getActiveContractTemplateOrThrow()
-  const templateBuffer = await downloadContractTemplateBuffer(template)
+  const template = await getActiveContractTemplateOrThrow().catch(() => null)
+  let templateHtml = await loadLocalContractTemplateHtml()
+  if (template) {
+    try {
+      templateHtml = await downloadContractTemplateBuffer(template)
+    } catch (error) {
+      console.warn('Contract template fallback to local HTML:', (error as Error).message)
+    }
+  }
   const clientForContract = existingClient
     ? {
         fullName: existingClient.firstName,
@@ -124,8 +131,8 @@ export default defineEventHandler(async (event) => {
     clientNo,
     agrNo: reference
   })
-  const contractDocxBuffer = renderContractDocx(templateBuffer, contractData)
-  const contractPdfBuffer = await convertDocxToPdf(contractDocxBuffer)
+  const contractHtml = renderContractHtml(templateHtml, contractData)
+  const contractPdfBuffer = await convertHtmlToPdf(contractHtml)
   const contractUpload = await uploadContractPdf(contractPdfBuffer)
   const financials = calculateLoanFinancials(
     amount,

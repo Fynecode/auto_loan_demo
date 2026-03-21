@@ -2,13 +2,27 @@ import { prisma } from '~~/server/utils/prisma'
 import { requireAuth } from '~~/server/utils/requireAuth'
 import cloudinary from '~~/server/utils/cloudinary'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
-import { validateUpload, allowedDocxOnly } from '~~/server/utils/uploadValidation'
+import { validateUpload, allowedHtmlOnly } from '~~/server/utils/uploadValidation'
+
+const REQUIRED_PLACEHOLDERS = [
+  'clientNumber',
+  'agreementNumber',
+  'idNumber',
+  'employmentNumber',
+  'clientName',
+  'loanAmount',
+  'loanPeriod',
+  'interestRate',
+  'totalRepayable',
+  'monthlyInstallment',
+  'bankName',
+  'accountNumber',
+  'branchCode'
+]
 
 export default defineEventHandler(async (event) => {
-  const currentUser = requireAuth(event)
-  if (currentUser.role !== 'ADMIN') {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
+  requireAuth(event)
+  throw createError({ statusCode: 403, message: 'Template uploads are disabled.' })
 
   const form = await readMultipartFormData(event)
   if (!form) {
@@ -20,7 +34,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Missing template file' })
   }
 
-  validateUpload(templateFile, allowedDocxOnly)
+  validateUpload(templateFile, allowedHtmlOnly)
+
+  const templateHtml = Buffer.from(templateFile.data).toString('utf-8')
+  const missing = REQUIRED_PLACEHOLDERS.filter((key) => {
+    const pattern = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
+    return !pattern.test(templateHtml)
+  })
+  if (missing.length) {
+    throw createError({
+      statusCode: 400,
+      message: `Template missing placeholders: ${missing.join(', ')}`
+    })
+  }
 
   const uploadResult = await new Promise<any>((resolve, reject) => {
     cloudinary.uploader.upload_stream(

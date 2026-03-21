@@ -79,48 +79,31 @@ export async function buildContractPayload(
   const baseFee = durationMonths > 0 ? principal / durationMonths : 0
   const levy = principal * 0.0103
 
-  const payload = {
-    clientNo: options.clientNo,
-    agrNo: options.agrNo,
-    empNo: client.empNumber ?? '',
-    idNo: client.idNumber ?? '',
-    fullName: client.fullName ?? '',
-    amount: round2(principal),
-    levy: round2(levy),
-    finCharges: round2(totals.totalInterest),
-    amountRepay: round2(totals.totalAmountRepayable),
-    baseFee: round2(baseFee),
-    deduction: round2(deductionFee),
-    totalFee: round2(totals.totalMonthlyInstallment),
-    period: durationMonths,
-    bank: loan.bank ?? '',
-    accountNo: loan.accountNumber ?? '',
-    branchCode: loan.branchCode ?? '',
-    rate: round2(interestRate)
-  }
-
-  const tableRows = [
-    { label: 'Client No', value: String(payload.clientNo) },
-    { label: 'Agreement No', value: String(payload.agrNo) },
-    { label: 'Employment No', value: String(payload.empNo) },
-    { label: 'ID No', value: String(payload.idNo) },
-    { label: 'Full Name', value: String(payload.fullName) },
-    { label: 'Principal Amount', value: formatCurrency(principal) },
-    { label: 'Levy (1.03%)', value: formatCurrency(payload.levy) },
-    { label: 'Finance Charges', value: formatCurrency(payload.finCharges) },
-    { label: 'Total Repayable', value: formatCurrency(payload.amountRepay) },
-    { label: 'Base Installment', value: formatCurrency(payload.baseFee) },
-    { label: 'Deduction Fee', value: formatCurrency(payload.deduction) },
-    { label: 'Total Monthly Installment', value: formatCurrency(payload.totalFee) },
-    { label: 'Loan Period (Months)', value: String(payload.period) },
-    { label: 'Bank', value: String(payload.bank) },
-    { label: 'Account No', value: String(payload.accountNo) },
-    { label: 'Branch Code', value: String(payload.branchNo) },
-    { label: 'Interest Rate (%)', value: String(payload.rate) }
-  ]
-
   return {
-    ...payload,
-    tableRows
+    clientNumber: String(options.clientNo),
+    agreementNumber: String(options.agrNo),
+    idNumber: client.idNumber ?? '',
+    employmentNumber: client.empNumber ?? '',
+    clientName: client.fullName ?? '',
+    loanAmount: formatCurrency(principal),
+    loanPeriod: `${durationMonths} months`,
+    interestRate: `${round2(interestRate)}%`,
+    principalDebt: formatCurrency(principal),
+    totalRepayable: formatCurrency(totals.totalAmountRepayable),
+    monthlyInstallment: formatCurrency(totals.totalMonthlyInstallment),
+    bankName: loan.bank ?? '',
+    accountNumber: String(loan.accountNumber ?? ''),
+    branchCode: String(loan.branchCode ?? ''),
+    amount: formatCurrency(principal),
+    period: durationMonths,
+    rate: round2(interestRate),
+    levy: formatCurrency(levy),
+    bank: loan.bank ?? '',
+    accountNo: String(loan.accountNumber ?? ''),
+    finCharges: formatCurrency(totals.totalInterest),
+    amountRepay: formatCurrency(totals.totalAmountRepayable),
+    baseFee: formatCurrency(baseFee),
+    deduction: formatCurrency(deductionFee),
+    totalFee: formatCurrency(totals.totalMonthlyInstallment)
   }
 }
