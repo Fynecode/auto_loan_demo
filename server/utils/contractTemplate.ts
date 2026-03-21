@@ -2,6 +2,7 @@ import { createError } from 'h3'
 import { prisma } from './prisma'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 
 export async function getActiveContractTemplateOrThrow() {
   const template = await prisma.contractTemplate.findFirst({
@@ -45,6 +46,11 @@ export async function downloadContractTemplateBuffer(template: { fileUrl: string
 }
 
 export async function loadLocalContractTemplateHtml() {
+  const runtimePath = join(process.cwd(), '.output', 'server', 'templates', 'contract.html')
+  if (existsSync(runtimePath)) {
+    return await readFile(runtimePath, 'utf-8')
+  }
+
   const templatePath = join(process.cwd(), 'server', 'templates', 'contract.html')
   return await readFile(templatePath, 'utf-8')
 }
