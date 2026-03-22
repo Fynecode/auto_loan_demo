@@ -13,11 +13,24 @@ const REQUIRED_PLACEHOLDERS = [
   'loanAmount',
   'loanPeriod',
   'interestRate',
+  'principalDebt',
   'totalRepayable',
   'monthlyInstallment',
   'bankName',
   'accountNumber',
-  'branchCode'
+  'branchCode',
+  'logoUrl',
+  'amount',
+  'period',
+  'rate',
+  'levy',
+  'bank',
+  'accountNo',
+  'finCharges',
+  'amountRepay',
+  'baseFee',
+  'deduction',
+  'totalFee'
 ]
 
 export default defineEventHandler(async (event) => {
