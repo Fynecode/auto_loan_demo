@@ -10,7 +10,6 @@ const REQUIRED_PLACEHOLDERS = [
   'idNumber',
   'employmentNumber',
   'clientName',
-  'monthlyInstallment',
   'branchCode',
   'logoUrl',
   'amount',
