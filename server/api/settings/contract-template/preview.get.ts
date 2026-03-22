@@ -9,14 +9,9 @@ export default defineEventHandler(async (event) => {
 
   try {
     const template = await getActiveContractTemplateOrThrow().catch(() => null)
-    let templateHtml = await loadLocalContractTemplateHtml()
-    if (template) {
-      try {
-        templateHtml = await downloadContractTemplateBuffer(template)
-      } catch (error) {
-        console.warn('Template preview fallback to local HTML:', (error as Error).message)
-      }
-    }
+    const templateHtml = template
+      ? await downloadContractTemplateBuffer(template)
+      : await loadLocalContractTemplateHtml()
     const logoUrl = await getContractLogoUrl()
     const previewHtml = renderContractHtml(templateHtml, {
       logoUrl,

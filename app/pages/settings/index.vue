@@ -91,6 +91,34 @@ const previewError = ref('')
 const templateUploading = ref(false)
 const templateFile = ref<File | null>(null)
 const templateInputRef = ref<HTMLInputElement | null>(null)
+const requiredTemplatePlaceholders = [
+  'clientNumber',
+  'agreementNumber',
+  'idNumber',
+  'employmentNumber',
+  'clientName',
+  'loanAmount',
+  'loanPeriod',
+  'interestRate',
+  'principalDebt',
+  'totalRepayable',
+  'monthlyInstallment',
+  'bankName',
+  'accountNumber',
+  'branchCode',
+  'logoUrl',
+  'amount',
+  'period',
+  'rate',
+  'levy',
+  'bank',
+  'accountNo',
+  'finCharges',
+  'amountRepay',
+  'baseFee',
+  'deduction',
+  'totalFee'
+]
 const logoUrl = ref('')
 const logoUploading = ref(false)
 const logoFile = ref<File | null>(null)
@@ -422,25 +450,37 @@ async function deleteUser() {
         </p>
 
         <div class="flex flex-col md:flex-row md:items-center gap-3 mb-6">
-          <input
-            type="file"
-            accept=".html"
-            class="text-xs hidden"
-            ref="templateInputRef"
-            @change="onTemplateSelected"
-          />
-          <button class="btn btn-outline text-xs" @click="triggerTemplatePicker">
-            Choose HTML
-          </button>
-          <button
-            class="btn btn-primary text-xs"
-            :disabled="templateUploading || !templateFile"
-            @click="uploadTemplate"
-          >
-            <Loader2 v-if="templateUploading" class="w-4 h-4 animate-spin mr-2" />
-            Upload template
-          </button>
-          <span v-if="templateFile" class="text-xs text-gray-500">{{ templateFile.name }}</span>
+          <div class="flex flex-1 flex-wrap items-center gap-3">
+            <input
+              type="file"
+              accept=".html"
+              class="text-xs hidden"
+              ref="templateInputRef"
+              @change="onTemplateSelected"
+            />
+            <button class="btn btn-outline text-xs" @click="triggerTemplatePicker">
+              Choose HTML
+            </button>
+            <button
+              class="btn btn-primary text-xs"
+              :disabled="templateUploading || !templateFile"
+              @click="uploadTemplate"
+            >
+              <Loader2 v-if="templateUploading" class="w-4 h-4 animate-spin mr-2" />
+              Upload template
+            </button>
+            <span v-if="templateFile" class="text-xs text-gray-500">{{ templateFile.name }}</span>
+          </div>
+          <div class="w-full md:w-56">
+            <label class="text-[11px] uppercase tracking-wide text-gray-400 mb-1 block">
+              Required placeholders
+            </label>
+            <select class="input text-xs" size="6" aria-label="Required placeholders">
+              <option v-for="item in requiredTemplatePlaceholders" :key="item">
+                {{ item }}
+              </option>
+            </select>
+          </div>
         </div>
 
         <div class="border-t border-[color:var(--border)] pt-5">
