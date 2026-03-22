@@ -471,15 +471,13 @@ async function deleteUser() {
             </button>
             <span v-if="templateFile" class="text-xs text-gray-500">{{ templateFile.name }}</span>
           </div>
-          <div class="w-full md:w-56">
-            <label class="text-[11px] uppercase tracking-wide text-gray-400 mb-1 block">
-              Required placeholders
-            </label>
-            <select class="input text-xs" size="6" aria-label="Required placeholders">
-              <option v-for="item in requiredTemplatePlaceholders" :key="item">
-                {{ item }}
-              </option>
-            </select>
+          <div class="w-full md:w-56 flex md:justify-end">
+            <div class="text-xs text-gray-500">
+              <span class="font-medium text-gray-600">Required placeholders:</span>
+              <span class="ml-1" :title="requiredTemplatePlaceholders.join(', ')">
+                Hover to view list
+              </span>
+            </div>
           </div>
         </div>
 

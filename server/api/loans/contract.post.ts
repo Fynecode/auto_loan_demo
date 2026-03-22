@@ -50,13 +50,16 @@ export default defineEventHandler(async (event) => {
 
   try {
     const template = await getActiveContractTemplateOrThrow().catch(() => null)
-    let templateHtml = await loadLocalContractTemplateHtml()
+    let templateHtml: string
     if (template) {
       try {
         templateHtml = await downloadContractTemplateBuffer(template)
       } catch (error) {
         console.warn('Contract template fallback to local HTML:', (error as Error).message)
+        templateHtml = await loadLocalContractTemplateHtml()
       }
+    } else {
+      templateHtml = await loadLocalContractTemplateHtml()
     }
     const html = renderContractHtml(templateHtml, { ...contractData, logoUrl })
     const pdfBuffer = await convertHtmlToPdf(html)
