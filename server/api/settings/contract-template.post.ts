@@ -21,8 +21,10 @@ const REQUIRED_PLACEHOLDERS = [
 ]
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event)
-  throw createError({ statusCode: 403, message: 'Template uploads are disabled.' })
+  const currentUser = requireAuth(event)
+  if (currentUser.role !== 'ADMIN') {
+    throw createError({ statusCode: 403, message: 'Forbidden' })
+  }
 
   const form = await readMultipartFormData(event)
   if (!form) {

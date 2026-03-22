@@ -88,6 +88,9 @@ const templatePreviewUrl = computed(() => '/api/settings/contract-template/previ
 const previewLoaded = ref(false)
 const previewHtml = ref('')
 const previewError = ref('')
+const templateUploading = ref(false)
+const templateFile = ref<File | null>(null)
+const templateInputRef = ref<HTMLInputElement | null>(null)
 const logoUrl = ref('')
 const logoUploading = ref(false)
 const logoFile = ref<File | null>(null)
@@ -103,6 +106,39 @@ async function loadTemplatePreview() {
     previewHtml.value = ''
   } finally {
     previewLoaded.value = true
+  }
+}
+
+function onTemplateSelected(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  if (!target?.files?.length) {
+    templateFile.value = null
+    return
+  }
+  templateFile.value = target.files[0]
+}
+
+function triggerTemplatePicker() {
+  templateInputRef.value?.click()
+}
+
+async function uploadTemplate() {
+  if (!templateFile.value) return
+  try {
+    templateUploading.value = true
+    const formData = new FormData()
+    formData.append('template', templateFile.value)
+    await $fetch('/api/settings/contract-template', {
+      method: 'POST',
+      body: formData
+    })
+    templateFile.value = null
+    addToast({ message: 'Template uploaded', variant: 'success' })
+    await loadTemplatePreview()
+  } catch (err: any) {
+    addToast({ message: err?.data?.message || 'Failed to upload template', variant: 'error' })
+  } finally {
+    templateUploading.value = false
   }
 }
 
@@ -289,7 +325,7 @@ async function deleteUser() {
         @click="selectedSection = 'template'"
       >
         <p class="text-xs text-gray-400">Templates</p>
-        <p class="text-sm font-semibold">Contract branding</p>
+        <p class="text-sm font-semibold">Contract template</p>
       </button>
     </div>
 
@@ -380,56 +416,85 @@ async function deleteUser() {
 
     <div v-if="selectedSection === 'template'" class="mt-6">
       <div class="card p-4 w-full">
-        <h2 class="text-sm font-semibold mb-3">Contract Branding</h2>
+        <h2 class="text-sm font-semibold mb-3">Contract Template</h2>
         <p class="text-xs text-gray-500 mb-4">
-          Upload a logo to appear on generated contracts. Allowed: SVG, PNG, JPG, ICO.
+          Upload a single HTML file. Inline your CSS in the template for reliable PDF output.
         </p>
 
-        <div class="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+        <div class="flex flex-col md:flex-row md:items-center gap-3 mb-6">
           <input
             type="file"
-            accept=".svg,.png,.jpg,.jpeg,.ico"
+            accept=".html"
             class="text-xs hidden"
-            ref="logoInputRef"
-            @change="onLogoSelected"
+            ref="templateInputRef"
+            @change="onTemplateSelected"
           />
-          <button
-            class="btn btn-outline text-xs"
-            @click="triggerLogoPicker"
-          >
-            Choose file
+          <button class="btn btn-outline text-xs" @click="triggerTemplatePicker">
+            Choose HTML
           </button>
           <button
             class="btn btn-primary text-xs"
-            :disabled="logoUploading || !logoFile"
-            @click="uploadLogo"
+            :disabled="templateUploading || !templateFile"
+            @click="uploadTemplate"
           >
-            <Loader2 v-if="logoUploading" class="w-4 h-4 animate-spin mr-2" />
-            {{ logoUrl ? 'Update logo' : 'Upload logo' }}
+            <Loader2 v-if="templateUploading" class="w-4 h-4 animate-spin mr-2" />
+            Upload template
           </button>
-          <span v-if="logoFile" class="text-xs text-gray-500">{{ logoFile.name }}</span>
+          <span v-if="templateFile" class="text-xs text-gray-500">{{ templateFile.name }}</span>
         </div>
 
-        <div v-if="logoUrl" class="mb-6">
-          <p class="text-xs text-gray-500 mb-2">Current logo</p>
-          <div class="flex flex-col md:flex-row md:items-center gap-3">
-            <div class="w-40 h-20 border border-[color:var(--border)] rounded-lg bg-white flex items-center justify-center overflow-hidden">
-            <img :src="logoUrl" alt="Contract logo" class="max-h-full max-w-full object-contain" />
-            </div>
-            <div class="flex items-center gap-2">
-              <button class="btn btn-outline text-xs" @click="triggerLogoPicker">
-                Update
-              </button>
-              <button class="btn text-xs text-red-500 hover:text-red-600" @click="deleteLogo">
-                Delete
-              </button>
+        <div class="border-t border-[color:var(--border)] pt-5">
+          <h3 class="text-sm font-semibold mb-3">Contract Branding</h3>
+          <p class="text-xs text-gray-500 mb-4">
+            Upload a logo to appear on generated contracts. Allowed: SVG, PNG, JPG, ICO.
+          </p>
+
+          <div class="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+            <input
+              type="file"
+              accept=".svg,.png,.jpg,.jpeg,.ico"
+              class="text-xs hidden"
+              ref="logoInputRef"
+              @change="onLogoSelected"
+            />
+            <button
+              class="btn btn-outline text-xs"
+              @click="triggerLogoPicker"
+            >
+              Choose file
+            </button>
+            <button
+              class="btn btn-primary text-xs"
+              :disabled="logoUploading || !logoFile"
+              @click="uploadLogo"
+            >
+              <Loader2 v-if="logoUploading" class="w-4 h-4 animate-spin mr-2" />
+              {{ logoUrl ? 'Update logo' : 'Upload logo' }}
+            </button>
+            <span v-if="logoFile" class="text-xs text-gray-500">{{ logoFile.name }}</span>
+          </div>
+
+          <div v-if="logoUrl" class="mb-6">
+            <p class="text-xs text-gray-500 mb-2">Current logo</p>
+            <div class="flex flex-col md:flex-row md:items-center gap-3">
+              <div class="w-40 h-20 border border-[color:var(--border)] rounded-lg bg-white flex items-center justify-center overflow-hidden">
+              <img :src="logoUrl" alt="Contract logo" class="max-h-full max-w-full object-contain" />
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="btn btn-outline text-xs" @click="triggerLogoPicker">
+                  Update
+                </button>
+                <button class="btn text-xs text-red-500 hover:text-red-600" @click="deleteLogo">
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <h3 class="text-sm font-semibold mb-3">Contract Preview</h3>
         <p class="text-xs text-gray-500 mb-3">
-          The system now uses a single local HTML template. Preview below.
+          Preview the active HTML template below.
         </p>
 
         <div v-if="templatePreviewUrl" class="mt-4 border border-[color:var(--border)] rounded-2xl overflow-hidden relative">
