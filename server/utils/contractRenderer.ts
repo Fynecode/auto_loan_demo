@@ -29,7 +29,21 @@ export async function convertHtmlToPdf(html: string) {
 
   try {
     const page = await browser.newPage()
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+    await page.setContent(html, { waitUntil: ['load', 'networkidle0'] })
+    await page.evaluate(async () => {
+      const images = Array.from(document.images || [])
+      if (!images.length) return
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve()
+          return new Promise<void>((resolve) => {
+            const done = () => resolve()
+            img.addEventListener('load', done, { once: true })
+            img.addEventListener('error', done, { once: true })
+          })
+        })
+      )
+    })
     await page.emulateMediaType('print')
     const pdfBuffer = await page.pdf({
       format: 'A4',
