@@ -11,6 +11,7 @@ import { generateLoanReference } from '~~/server/utils/generateLoanReference'
 import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer, loadLocalContractTemplateHtml } from '~~/server/utils/contractTemplate'
 import { renderContractHtml, convertHtmlToPdf } from '~~/server/utils/contractRenderer'
 import { getContractLogoUrl } from '~~/server/utils/settings'
+import cloudinary from '~~/server/utils/cloudinary'
 
 export default defineEventHandler(async (event) => {
   const form = await readMultipartFormData(event)
@@ -63,11 +64,10 @@ export default defineEventHandler(async (event) => {
     }
     const html = renderContractHtml(templateHtml, { ...contractData, logoUrl })
     const pdfBuffer = await convertHtmlToPdf(html)
+    const upload = await uploadPreviewPdf(pdfBuffer)
 
-    setHeader(event, 'Content-Type', 'application/pdf')
-    setHeader(event, 'Content-Disposition', 'inline; filename=contract.pdf')
-
-    return pdfBuffer
+    setHeader(event, 'Content-Type', 'application/json; charset=utf-8')
+    return upload
 
   } catch (err: any) {
     console.error(err)
@@ -77,3 +77,29 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
+
+async function uploadPreviewPdf(
+  pdfBuffer: Buffer
+): Promise<{ url: string; publicId: string; resourceType: string; format?: string }> {
+  const uploadResult = await new Promise<any>((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      {
+        folder: 'loan-contract-previews',
+        resource_type: 'auto',
+        use_filename: true,
+        unique_filename: true
+      },
+      (error, result) => {
+        if (error) reject(error)
+        else resolve(result)
+      }
+    ).end(pdfBuffer)
+  })
+
+  return {
+    url: uploadResult.secure_url,
+    publicId: uploadResult.public_id,
+    resourceType: uploadResult.resource_type,
+    format: uploadResult.format
+  }
+}

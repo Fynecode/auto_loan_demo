@@ -7,6 +7,7 @@ import { buildContractPayload, calculateLoanFinancials, DEFAULT_DEDUCTION_FEE } 
 import { getActiveContractTemplateOrThrow, downloadContractTemplateBuffer, loadLocalContractTemplateHtml } from '~~/server/utils/contractTemplate'
 import { renderContractHtml, convertHtmlToPdf } from '~~/server/utils/contractRenderer'
 import { sendLoanContractEmail } from '~~/server/utils/resend'
+import { getContractLogoUrl } from '~~/server/utils/settings'
 import pkg from '@prisma/client'
 import { createError, defineEventHandler, readMultipartFormData } from 'h3'
 
@@ -29,6 +30,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const { client, loan } = JSON.parse(payloadPart.data.toString())
+  const previewPart = form.find(f => f.name === 'contractPreview')
+  const previewMeta = parseContractPreview(previewPart?.data)
 
   if (!client || !loan) {
     throw createError({ statusCode: 400, message: 'Missing client or loan data' })
@@ -105,15 +108,6 @@ export default defineEventHandler(async (event) => {
     uploads.map(({ type, file }) => uploadToCloudinary(file, type))
   )
 
-  const template = await getActiveContractTemplateOrThrow().catch(() => null)
-  let templateHtml = await loadLocalContractTemplateHtml()
-  if (template) {
-    try {
-      templateHtml = await downloadContractTemplateBuffer(template)
-    } catch (error) {
-      console.warn('Contract template fallback to local HTML:', (error as Error).message)
-    }
-  }
   const clientForContract = existingClient
     ? {
         fullName: existingClient.firstName,
@@ -127,13 +121,31 @@ export default defineEventHandler(async (event) => {
   const clientNo = existingClient
     ? await prisma.client.count({ where: { createdAt: { lt: existingClient.createdAt } } }) + 1
     : totalClients + 1
-  const contractData = await buildContractPayload(clientForContract, loan, {
-    clientNo,
-    agrNo: reference
-  })
-  const contractHtml = renderContractHtml(templateHtml, contractData)
-  const contractPdfBuffer = await convertHtmlToPdf(contractHtml)
-  const contractUpload = await uploadContractPdf(contractPdfBuffer)
+
+  let contractPdfBuffer: Buffer | null = null
+  let contractUpload: { url: string; publicId: string; resourceType: string; format?: string }
+
+  if (previewMeta) {
+    contractUpload = previewMeta
+  } else {
+    const template = await getActiveContractTemplateOrThrow().catch(() => null)
+    let templateHtml = await loadLocalContractTemplateHtml()
+    if (template) {
+      try {
+        templateHtml = await downloadContractTemplateBuffer(template)
+      } catch (error) {
+        console.warn('Contract template fallback to local HTML:', (error as Error).message)
+      }
+    }
+    const logoUrl = await getContractLogoUrl()
+    const contractData = await buildContractPayload(clientForContract, loan, {
+      clientNo,
+      agrNo: reference
+    })
+    const contractHtml = renderContractHtml(templateHtml, { ...contractData, logoUrl })
+    contractPdfBuffer = await convertHtmlToPdf(contractHtml)
+    contractUpload = await uploadContractPdf(contractPdfBuffer)
+  }
   const financials = calculateLoanFinancials(
     amount,
     interest,
@@ -221,6 +233,16 @@ export default defineEventHandler(async (event) => {
   })
 
   if (sendEmailPart?.data?.toString() === 'true') {
+    if (!contractPdfBuffer) {
+      const res = await fetch(contractUpload.url)
+      if (!res.ok) {
+        throw createError({
+          statusCode: 502,
+          message: `Failed to download contract PDF (${res.status})`
+        })
+      }
+      contractPdfBuffer = Buffer.from(await res.arrayBuffer())
+    }
     await sendLoanContractEmail({
       to: email,
       reference,
@@ -290,6 +312,22 @@ async function uploadContractPdf(
     publicId: uploadResult.public_id,
     resourceType: uploadResult.resource_type,
     format: uploadResult.format
+  }
+}
+
+function parseContractPreview(data?: Uint8Array) {
+  if (!data) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(data).toString())
+    if (!parsed?.url || !parsed?.publicId || !parsed?.resourceType) return null
+    return {
+      url: String(parsed.url),
+      publicId: String(parsed.publicId),
+      resourceType: String(parsed.resourceType),
+      format: parsed.format ? String(parsed.format) : undefined
+    }
+  } catch {
+    return null
   }
 }
 

@@ -18,6 +18,12 @@
     const processing = ref(false)
     const canProceed = ref(false)
     const contractPreviewUrl = ref<string | null>(null)
+    const contractPreviewMeta = ref<{
+        url: string
+        publicId: string
+        resourceType: string
+        format?: string
+    } | null>(null)
 
     // Extracted data (mocked for now)
     const client = ref({
@@ -201,6 +207,7 @@
         error.value = null
         processing.value = true
         contractPreviewUrl.value = null
+        contractPreviewMeta.value = null
 
         try {
             const form = new FormData()
@@ -216,19 +223,24 @@
 
             const { data: contract, error: contractError } = await useFetch('/api/loans/contract', {
                 method: 'POST',
-                body: form,
-                responseType: 'arrayBuffer'
+                body: form
             })
 
             if (contractError.value) {
                 throw contractError.value
             }
 
-            const blob = new Blob([contract.value], {
-                type: 'application/pdf'
-            })
+            if (!contract.value?.url) {
+                throw new Error('Contract preview upload failed')
+            }
 
-            contractPreviewUrl.value = URL.createObjectURL(blob)
+            contractPreviewUrl.value = contract.value.url
+            contractPreviewMeta.value = {
+                url: contract.value.url,
+                publicId: contract.value.publicId,
+                resourceType: contract.value.resourceType,
+                format: contract.value.format
+            }
             return true
         } catch (e: any) {
             error.value = e?.data?.message ?? 'Loan creation failed'
@@ -279,6 +291,9 @@
                 })
             )
             form.append('sendEmail', sendEmail ? 'true' : 'false')
+            if (contractPreviewMeta.value) {
+                form.append('contractPreview', JSON.stringify(contractPreviewMeta.value))
+            }
 
             await $fetch('/api/loans/', {
                 method: 'POST',

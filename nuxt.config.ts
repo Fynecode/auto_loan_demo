@@ -9,6 +9,7 @@ export default defineNuxtConfig({
       inline: [
         '@prisma/adapter-pg'
       ]
-    }
+    },
+    assets: ['server/templates']
   }
 })
