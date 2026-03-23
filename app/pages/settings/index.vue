@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sideNav from '~/components/sideNav.vue'
 import { Loader2, PencilLine, Trash2, UserPlus, X } from 'lucide-vue-next'
 import { useToast } from '~/composables/useToast'
-import { listPreviewMetas, removePreviewMeta } from '../utils/contractPreviewCache'
+import { listPreviewMetas, removePreviewMeta } from '~/utils/contractPreviewCache'
 
 const sidebarCollapsed = ref(true)
 const { addToast } = useToast()
