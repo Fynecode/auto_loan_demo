@@ -250,6 +250,16 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  if (previewMeta) {
+    try {
+      await cloudinary.uploader.destroy(previewMeta.publicId, {
+        resource_type: previewMeta.resourceType
+      })
+    } catch (error) {
+      console.warn('Failed to delete contract preview PDF:', (error as Error).message)
+    }
+  }
+
   return loanResult
 })
 
