@@ -26,9 +26,10 @@ export default defineEventHandler(async (event) => {
 
   const loan = await prisma.loan.findFirst({
     where: user.role === 'ADMIN'
-      ? { id }
+      ? { id, deletedAt: null }
       : {
           id,
+          deletedAt: null,
           OR: [
             { createdById: user.id },
             { assignments: { some: { userId: user.id } } }

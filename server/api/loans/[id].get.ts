@@ -12,9 +12,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const loanWhere = user.role === 'ADMIN'
-    ? { id: loanId }
+    ? { id: loanId, deletedAt: null }
     : {
         id: loanId,
+        deletedAt: null,
         OR: [
           { createdById: user.id },
           { assignments: { some: { userId: user.id } } }

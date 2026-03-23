@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
       }
 
   const where = {
+    deletedAt: null,
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(searchFilter as object),
     ...(accessFilter as object)

@@ -57,6 +57,7 @@ enum LoanActivityType {
   CONTRACT_UPLOADED
   PENALTY_APPLIED
   NOTE_ADDED
+  DELETED
 }
 
 
@@ -101,6 +102,7 @@ model Loan {
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
 
   transitions     LoanTransition[]
   penalties       LoanPenalty[]

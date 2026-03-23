@@ -23,7 +23,8 @@ export async function detectDuplicateLoan(
   const where: Record<string, any> = {
     principal: input.amount,
     interestRate: input.interest,
-    durationMonths: input.duration
+    durationMonths: input.duration,
+    deletedAt: null
   }
 
   if (clientFilters.length > 0) {

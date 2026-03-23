@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const activeLoan = await prisma.loan.findFirst({
-    where: { clientId, status: 'ACTIVE' },
+    where: { clientId, status: 'ACTIVE', deletedAt: null },
     select: { id: true }
   })
   if (activeLoan) {

@@ -75,27 +75,27 @@ export default defineEventHandler(async (event) => {
 
   const [activeLoans, overdueLoans, totalOutstandingAgg, overdueAmountAgg, totalPaidAgg, totalExpectedAgg] =
     await Promise.all([
-      prisma.loan.count({ where: { status: LoanStatus.ACTIVE } }),
-      prisma.loan.count({ where: { status: LoanStatus.OVERDUE } }),
+      prisma.loan.count({ where: { status: LoanStatus.ACTIVE, deletedAt: null } }),
+      prisma.loan.count({ where: { status: LoanStatus.OVERDUE, deletedAt: null } }),
       prisma.loan.aggregate({
         _sum: { remainingAmount: true },
-        where: { status: { in: [LoanStatus.ACTIVE, LoanStatus.OVERDUE] } }
+        where: { status: { in: [LoanStatus.ACTIVE, LoanStatus.OVERDUE] }, deletedAt: null }
       }),
       prisma.loan.aggregate({
         _sum: { remainingAmount: true },
-        where: { status: LoanStatus.OVERDUE }
+        where: { status: LoanStatus.OVERDUE, deletedAt: null }
       }),
-      prisma.payment.aggregate({ _sum: { amount: true } }),
-      prisma.loan.aggregate({ _sum: { totalAmountRepayable: true } })
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { loan: { deletedAt: null } } }),
+      prisma.loan.aggregate({ _sum: { totalAmountRepayable: true }, where: { deletedAt: null } })
     ])
 
   const payments = await prisma.payment.findMany({
-    where: { paidAt: { gte: startDate, lt: endDate } },
+    where: { paidAt: { gte: startDate, lt: endDate }, loan: { deletedAt: null } },
     select: { amount: true, paidAt: true }
   })
 
   const loansInRange = await prisma.loan.findMany({
-    where: { createdAt: { gte: startDate, lt: endDate } },
+    where: { createdAt: { gte: startDate, lt: endDate }, deletedAt: null },
     select: { totalAmountRepayable: true, createdAt: true }
   })
 
@@ -122,7 +122,8 @@ export default defineEventHandler(async (event) => {
   recentStart.setDate(recentStart.getDate() - 30)
 
   const penaltyWhere: any = {
-    createdAt: { gte: recentStart }
+    createdAt: { gte: recentStart },
+    loan: { deletedAt: null }
   }
   if (penaltyType !== 'all' && Object.values(LoanPenaltyType).includes(penaltyType as LoanPenaltyType)) {
     penaltyWhere.type = penaltyType as LoanPenaltyType
@@ -138,9 +139,9 @@ export default defineEventHandler(async (event) => {
 
   const recentPenaltyAmount = recentPenalties.reduce((sum, item) => sum + sumDecimal(item.penaltyAmount), 0)
 
-  let penaltyScopeWhere: any = {}
+  let penaltyScopeWhere: any = { loan: { deletedAt: null } }
   if (histogram === 'time') {
-    penaltyScopeWhere = { createdAt: { gte: startDate, lt: endDate } }
+    penaltyScopeWhere = { createdAt: { gte: startDate, lt: endDate }, loan: { deletedAt: null } }
   }
 
   const penalties = await prisma.loanPenalty.findMany({
