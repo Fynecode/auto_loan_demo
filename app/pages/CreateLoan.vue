@@ -1,9 +1,10 @@
 <script setup lang="ts">
 
-    import { computed, ref } from 'vue'
+    import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
     import { useRouter, useRoute } from 'vue-router'
     import { ArrowLeft, Upload, Loader2 } from 'lucide-vue-next'
     import { isValidNamibianID, isValidEmail, isValidNamibianPhone, hasEmptyFields } from '../utils/loanValidation'
+    import { listPreviewMetas, storePreviewMeta, removePreviewMeta, ContractPreviewMeta } from '../utils/contractPreviewCache'
     import { useToast } from '~/composables/useToast'
 
     const router = useRouter()
@@ -18,12 +19,7 @@
     const processing = ref(false)
     const canProceed = ref(false)
     const contractPreviewUrl = ref<string | null>(null)
-    const contractPreviewMeta = ref<{
-        url: string
-        publicId: string
-        resourceType: string
-        format?: string
-    } | null>(null)
+    const contractPreviewMeta = ref<ContractPreviewMeta | null>(null)
 
     // Extracted data (mocked for now)
     const client = ref({
@@ -110,6 +106,20 @@
     function cancel() {
         router.back()
     }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+        if (!contractPreviewMeta.value) return
+        event.preventDefault()
+        event.returnValue = ''
+    }
+
+    onMounted(() => {
+        window.addEventListener('beforeunload', handleBeforeUnload)
+    })
+
+    onBeforeUnmount(() => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+    })
 
     function goBackAfterSave() {
         if (returnTo.value) {
@@ -210,6 +220,7 @@
         contractPreviewMeta.value = null
 
         try {
+            await cleanupStalePreviews()
             const form = new FormData()
 
             // Structured payload
@@ -221,25 +232,38 @@
                 })
             )
 
-            const { data: contract, error: contractError } = await useFetch('/api/loans/contract', {
+            const res = await $fetch.raw('/api/loans/contract', {
                 method: 'POST',
-                body: form
+                body: form,
+                responseType: 'arrayBuffer'
             })
 
-            if (contractError.value) {
-                throw contractError.value
+            const header = res.headers?.get('x-contract-preview')
+            if (header) {
+                try {
+                    const meta = JSON.parse(header)
+                    if (meta?.url && meta?.publicId && meta?.resourceType && meta?.reference) {
+                        contractPreviewMeta.value = {
+                            url: meta.url,
+                            publicId: meta.publicId,
+                            resourceType: meta.resourceType,
+                            format: meta.format,
+                            reference: meta.reference
+                        }
+                    }
+                } catch {
+                    contractPreviewMeta.value = null
+                }
             }
 
-            if (!contract.value?.url) {
-                throw new Error('Contract preview upload failed')
-            }
+            const buffer = res._data as ArrayBuffer
+            const blob = new Blob([buffer], {
+                type: 'application/pdf'
+            })
 
-            contractPreviewUrl.value = contract.value.url
-            contractPreviewMeta.value = {
-                url: contract.value.url,
-                publicId: contract.value.publicId,
-                resourceType: contract.value.resourceType,
-                format: contract.value.format
+            contractPreviewUrl.value = URL.createObjectURL(blob)
+            if (contractPreviewMeta.value) {
+                storePreviewMeta(contractPreviewMeta.value)
             }
             return true
         } catch (e: any) {
@@ -300,6 +324,9 @@
                 body: form,
                 responseType: 'arrayBuffer'
             })
+            if (contractPreviewMeta.value?.reference) {
+                removePreviewMeta(contractPreviewMeta.value.reference)
+            }
             addToast({ message: sendEmail ? 'Loan saved and contract emailed' : 'Loan saved', variant: 'success' })
             goBackAfterSave()
 
@@ -337,6 +364,22 @@
 
     async function saveAndEmailContract() {
         await submitLoan(true)
+    }
+
+    async function cleanupStalePreviews() {
+        if (typeof window === 'undefined') return
+        const previews = listPreviewMetas()
+        if (!previews.length) return
+        try {
+            await $fetch('/api/settings/contract-previews/cleanup', {
+                method: 'POST',
+                body: { previews }
+            })
+        } catch {
+            // Ignore cleanup errors; we'll still clear local storage.
+        } finally {
+            previews.forEach((preview) => removePreviewMeta(preview.reference))
+        }
     }
 </script>
 

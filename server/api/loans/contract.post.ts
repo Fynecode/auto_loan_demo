@@ -44,9 +44,9 @@ export default defineEventHandler(async (event) => {
     ? await prisma.client.count({ where: { createdAt: { lt: existingClient.createdAt } } }) + 1
     : totalClients + 1
 
-  const agrNo = await generateLoanReference()
+  const reference = await generateLoanReference()
 
-  const contractData = await buildContractPayload(client, loan, { clientNo, agrNo })
+  const contractData = await buildContractPayload(client, loan, { clientNo, agrNo: reference })
   const logoUrl = await getContractLogoUrl()
 
   try {
@@ -64,10 +64,16 @@ export default defineEventHandler(async (event) => {
     }
     const html = renderContractHtml(templateHtml, { ...contractData, logoUrl })
     const pdfBuffer = await convertHtmlToPdf(html)
-    const upload = await uploadPreviewPdf(pdfBuffer)
+    const upload = await uploadPreviewPdf(pdfBuffer, reference)
 
-    setHeader(event, 'Content-Type', 'application/json; charset=utf-8')
-    return upload
+    setHeader(event, 'Content-Type', 'application/pdf')
+    setHeader(event, 'Content-Disposition', 'inline; filename=contract-preview.pdf')
+    setHeader(event, 'X-Contract-Preview', JSON.stringify({
+      ...upload,
+      reference
+    }))
+
+    return pdfBuffer
 
   } catch (err: any) {
     console.error(err)
@@ -79,15 +85,18 @@ export default defineEventHandler(async (event) => {
 })
 
 async function uploadPreviewPdf(
-  pdfBuffer: Buffer
+  pdfBuffer: Buffer,
+  reference: string
 ): Promise<{ url: string; publicId: string; resourceType: string; format?: string }> {
   const uploadResult = await new Promise<any>((resolve, reject) => {
     cloudinary.uploader.upload_stream(
       {
-        folder: 'loan-contract-previews',
+        folder: 'loan-contracts',
         resource_type: 'auto',
-        use_filename: true,
-        unique_filename: true
+        public_id: reference,
+        overwrite: true,
+        use_filename: false,
+        unique_filename: false
       },
       (error, result) => {
         if (error) reject(error)

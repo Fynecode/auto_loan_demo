@@ -18,6 +18,21 @@ export function useAuth() {
       user.value = await $fetch('/api/auth/me')
       if (process.client) {
         localStorage.setItem('auth-user', JSON.stringify(user.value))
+        if (user.value?.role === 'ADMIN') {
+          try {
+            const { listPreviewMetas, removePreviewMeta } = await import('../utils/contractPreviewCache')
+            const previews = listPreviewMetas()
+            if (previews.length) {
+              await $fetch('/api/settings/contract-previews/cleanup', {
+                method: 'POST',
+                body: { previews }
+              })
+              previews.forEach((preview) => removePreviewMeta(preview.reference))
+            }
+          } catch {
+            // Ignore cleanup errors on login.
+          }
+        }
       }
     } catch {
       user.value = null

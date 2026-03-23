@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sideNav from '~/components/sideNav.vue'
 import { Loader2, PencilLine, Trash2, UserPlus, X } from 'lucide-vue-next'
 import { useToast } from '~/composables/useToast'
+import { listPreviewMetas, removePreviewMeta } from '../utils/contractPreviewCache'
 
 const sidebarCollapsed = ref(true)
 const { addToast } = useToast()
@@ -123,6 +124,7 @@ const logoUrl = ref('')
 const logoUploading = ref(false)
 const logoFile = ref<File | null>(null)
 const logoInputRef = ref<HTMLInputElement | null>(null)
+const cleanupLoading = ref(false)
 
 async function loadTemplatePreview() {
   previewLoaded.value = false
@@ -221,6 +223,28 @@ async function deleteLogo() {
     await loadTemplatePreview()
   } catch (err: any) {
     addToast({ message: err?.data?.message || 'Failed to remove logo', variant: 'error' })
+  }
+}
+
+async function cleanupCachedPreviews() {
+  if (!isAdmin.value) return
+  cleanupLoading.value = true
+  try {
+    const previews = listPreviewMetas()
+    if (!previews.length) {
+      addToast({ message: 'No cached previews found', variant: 'success' })
+      return
+    }
+    await $fetch('/api/settings/contract-previews/cleanup', {
+      method: 'POST',
+      body: { previews }
+    })
+    previews.forEach((preview) => removePreviewMeta(preview.reference))
+    addToast({ message: 'Cached previews cleaned up', variant: 'success' })
+  } catch (err: any) {
+    addToast({ message: err?.data?.message || 'Failed to clean cached previews', variant: 'error' })
+  } finally {
+    cleanupLoading.value = false
   }
 }
 
@@ -391,6 +415,21 @@ async function deleteUser() {
           <span class="text-gray-500">Created</span>
           <span>{{ me?.createdAt ? new Date(me.createdAt).toLocaleDateString() : '-' }}</span>
         </div>
+      </div>
+
+      <div v-if="isAdmin" class="mt-6 border-t border-[color:var(--border)] pt-4">
+        <h3 class="text-sm font-semibold mb-2">Contract Preview Cleanup</h3>
+        <p class="text-xs text-gray-500 mb-3">
+          Remove cached preview PDFs created during unfinished loan creation.
+        </p>
+        <button
+          class="btn btn-outline text-xs"
+          :disabled="cleanupLoading"
+          @click="cleanupCachedPreviews"
+        >
+          <Loader2 v-if="cleanupLoading" class="w-4 h-4 animate-spin mr-2" />
+          Clean cached previews
+        </button>
       </div>
     </div>
 

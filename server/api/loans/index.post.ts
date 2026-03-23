@@ -16,7 +16,6 @@ import { validateUpload, allowedPdfDocx, allowedIdCopy, allowedPaymentProof } fr
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const reference = await generateLoanReference()
 
   const form = await readMultipartFormData(event)
   if (!form) {
@@ -32,6 +31,7 @@ export default defineEventHandler(async (event) => {
   const { client, loan } = JSON.parse(payloadPart.data.toString())
   const previewPart = form.find(f => f.name === 'contractPreview')
   const previewMeta = parseContractPreview(previewPart?.data)
+  const reference = previewMeta?.reference ?? await generateLoanReference()
 
   if (!client || !loan) {
     throw createError({ statusCode: 400, message: 'Missing client or loan data' })
@@ -250,16 +250,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (previewMeta) {
-    try {
-      await cloudinary.uploader.destroy(previewMeta.publicId, {
-        resource_type: previewMeta.resourceType
-      })
-    } catch (error) {
-      console.warn('Failed to delete contract preview PDF:', (error as Error).message)
-    }
-  }
-
   return loanResult
 })
 
@@ -329,12 +319,13 @@ function parseContractPreview(data?: Uint8Array) {
   if (!data) return null
   try {
     const parsed = JSON.parse(Buffer.from(data).toString())
-    if (!parsed?.url || !parsed?.publicId || !parsed?.resourceType) return null
+    if (!parsed?.url || !parsed?.publicId || !parsed?.resourceType || !parsed?.reference) return null
     return {
       url: String(parsed.url),
       publicId: String(parsed.publicId),
       resourceType: String(parsed.resourceType),
-      format: parsed.format ? String(parsed.format) : undefined
+      format: parsed.format ? String(parsed.format) : undefined,
+      reference: String(parsed.reference)
     }
   } catch {
     return null
