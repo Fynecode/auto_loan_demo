@@ -64,14 +64,10 @@ export default defineEventHandler(async (event) => {
     }
     const html = renderContractHtml(templateHtml, { ...contractData, logoUrl })
     const pdfBuffer = await convertHtmlToPdf(html)
-    const upload = await uploadPreviewPdf(pdfBuffer, reference)
+    // const upload = await uploadPreviewPdf(pdfBuffer, reference)
 
     setHeader(event, 'Content-Type', 'application/pdf')
     setHeader(event, 'Content-Disposition', 'inline; filename=contract-preview.pdf')
-    setHeader(event, 'X-Contract-Preview', JSON.stringify({
-      ...upload,
-      reference
-    }))
 
     return pdfBuffer
 

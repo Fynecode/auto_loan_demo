@@ -29,9 +29,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { client, loan } = JSON.parse(payloadPart.data.toString())
-  const previewPart = form.find(f => f.name === 'contractPreview')
-  const previewMeta = parseContractPreview(previewPart?.data)
-  const reference = previewMeta?.reference ?? await generateLoanReference()
+  const reference = await generateLoanReference()
 
   if (!client || !loan) {
     throw createError({ statusCode: 400, message: 'Missing client or loan data' })
@@ -104,10 +102,6 @@ export default defineEventHandler(async (event) => {
   if (bankStatement?.data) uploads.push({ type: DocumentType.BANK_STATEMENT, file: bankStatement })
   if (payslip?.data) uploads.push({ type: DocumentType.PAYSLIP, file: payslip })
 
-  const uploaded = await Promise.all(
-    uploads.map(({ type, file }) => uploadToCloudinary(file, type))
-  )
-
   const clientForContract = existingClient
     ? {
         fullName: existingClient.firstName,
@@ -125,9 +119,6 @@ export default defineEventHandler(async (event) => {
   let contractPdfBuffer: Buffer | null = null
   let contractUpload: { url: string; publicId: string; resourceType: string; format?: string }
 
-  if (previewMeta) {
-    contractUpload = previewMeta
-  } else {
     const template = await getActiveContractTemplateOrThrow().catch(() => null)
     let templateHtml = await loadLocalContractTemplateHtml()
     if (template) {
@@ -143,9 +134,7 @@ export default defineEventHandler(async (event) => {
       agrNo: reference
     })
     const contractHtml = renderContractHtml(templateHtml, { ...contractData, logoUrl })
-    contractPdfBuffer = await convertHtmlToPdf(contractHtml)
-    contractUpload = await uploadContractPdf(contractPdfBuffer)
-  }
+
   const financials = calculateLoanFinancials(
     amount,
     interest,
@@ -194,42 +183,52 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    for (const doc of uploaded) {
-      await tx.document.create({
-        data: {
-          type: doc.type,
-          fileUrl: doc.url,
-          publicId: doc.publicId,
-          resourceType: doc.resourceType,
-          format: doc.format,
-          clientId: clientRecord.id,
-          loanId: createdLoan.id
-        }
-      })
-    }
-
-    const contractRecord = await tx.contract.create({
-      data: {
-        loanId: createdLoan.id,
-        fileUrl: contractUpload.url,
-        publicId: contractUpload.publicId,
-        resourceType: contractUpload.resourceType,
-        format: contractUpload.format
-      }
-    })
-
-    await tx.loan.update({
+    const loan = await tx.loan.findUnique({
       where: { id: createdLoan.id },
-      data: { contractId: contractRecord.id }
+      include: { client: true}
     })
 
-    return tx.loan.findUnique({
-      where: { id: createdLoan.id },
-      include: { client: true, Documents: true, contract: true }
-    })
+    const clientRecordId = clientRecord.id
+    const loanId = createdLoan.id
+    return {loan, clientRecordId, loanId}
   }, {
     maxWait: 10000,
     timeout: 20000
+  })
+
+  contractPdfBuffer = await convertHtmlToPdf(contractHtml)
+  contractUpload = await uploadContractPdf(contractPdfBuffer)
+  const uploaded = await Promise.all(
+    uploads.map(({ type, file }) => uploadToCloudinary(file, type))
+  )
+
+  for (const doc of uploaded) {
+    await prisma.document.create({
+      data: {
+        type: doc.type,
+        fileUrl: doc.url,
+        publicId: doc.publicId,
+        resourceType: doc.resourceType,
+        format: doc.format,
+        clientId: loanResult.clientRecordId,
+        loanId: loanResult.loanId
+      }
+    })
+  }
+
+  const contractRecord = await prisma.contract.create({
+    data: {
+      loanId: loanResult.loanId,
+      fileUrl: contractUpload.url,
+      publicId: contractUpload.publicId,
+      resourceType: contractUpload.resourceType,
+      format: contractUpload.format
+    }
+  })
+
+  await prisma.loan.update({
+    where: { id: loanResult.loanId },
+    data: { contractId: contractRecord.id }
   })
 
   if (sendEmailPart?.data?.toString() === 'true') {
