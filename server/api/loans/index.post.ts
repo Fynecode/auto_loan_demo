@@ -119,15 +119,25 @@ export default defineEventHandler(async (event) => {
   let contractPdfBuffer: Buffer | null = null
   let contractUpload: { url: string; publicId: string; resourceType: string; format?: string }
 
-    const template = await getActiveContractTemplateOrThrow().catch(() => null)
-    let templateHtml = await loadLocalContractTemplateHtml()
-    if (template) {
-      try {
-        templateHtml = await downloadContractTemplateBuffer(template)
-      } catch (error) {
-        console.warn('Contract template fallback to local HTML:', (error as Error).message)
-      }
-    }
+    let templateHtml: string | null = null
+
+const template = await getActiveContractTemplateOrThrow().catch(() => null)
+
+// 1. Try DB template
+if (template) {
+  try {
+    templateHtml = await downloadContractTemplateBuffer(template)
+  } catch (error) {
+    console.warn('DB template failed:', (error as Error).message)
+  }
+}
+
+// 2. Fallback (ONLY if needed)
+if (!templateHtml) {
+  console.warn('Falling back to local template')
+
+  templateHtml = await loadLocalContractTemplateHtml()
+}
     const logoUrl = await getContractLogoUrl()
     const contractData = await buildContractPayload(clientForContract, loan, {
       clientNo,
